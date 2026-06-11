@@ -481,8 +481,8 @@
                                     HorizontalAlignment="Stretch">
                                     <controls:Expander.Header>
                                         <controls:Grid
-                                            MinHeight="36"
-                                            Padding="48,6,12,6"
+                                            MinHeight="42"
+                                            Padding="33,-9,-3,-9"
                                             ColumnSpacing="12"
                                             HorizontalAlignment="Stretch">
                                             <controls:Grid.ColumnDefinitions>
