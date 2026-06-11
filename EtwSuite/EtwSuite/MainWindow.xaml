@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="EtwSuite.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:EtwSuite"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:media="using:Microsoft.UI.Xaml.Media"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    mc:Ignorable="d"
+    Title="EtwSuite">
+
+    <Window.SystemBackdrop>
+        <media:MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <controls:Grid
+        x:Name="Root"
+        Padding="20"
+        Loaded="Root_Loaded"
+        RowSpacing="12">
+        <controls:Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </controls:Grid.RowDefinitions>
+
+        <controls:Grid>
+            <controls:Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </controls:Grid.ColumnDefinitions>
+
+            <controls:StackPanel Spacing="4">
+                <controls:TextBlock
+                    FontSize="22"
+                    FontWeight="SemiBold"
+                    Text="ETW Providers" />
+                <controls:TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="{Binding ProviderCountText}" />
+            </controls:StackPanel>
+
+            <controls:TextBox
+                Grid.Column="1"
+                Width="360"
+                HorizontalAlignment="Right"
+                Header="Search"
+                PlaceholderText="Provider name or GUID"
+                TextChanged="SearchTextBox_TextChanged" />
+        </controls:Grid>
+
+        <controls:Grid
+            Grid.Row="1"
+            ColumnSpacing="16">
+            <controls:Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="3*" />
+            </controls:Grid.ColumnDefinitions>
+
+            <controls:ListView
+                ItemsSource="{Binding Providers}"
+                SelectedItem="{Binding SelectedProvider, Mode=TwoWay}"
+                SelectionMode="Single">
+                <controls:ListView.ItemTemplate>
+                    <DataTemplate>
+                        <controls:StackPanel Padding="4" Spacing="3">
+                            <controls:TextBlock
+                                FontWeight="SemiBold"
+                                Text="{Binding Name}"
+                                TextTrimming="CharacterEllipsis" />
+                            <controls:TextBlock
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="{Binding Id}" />
+                        </controls:StackPanel>
+                    </DataTemplate>
+                </controls:ListView.ItemTemplate>
+            </controls:ListView>
+
+            <controls:Grid
+                Grid.Column="1"
+                Padding="4"
+                DataContext="{Binding SelectedProviderDetails}"
+                RowSpacing="16">
+                <controls:Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </controls:Grid.RowDefinitions>
+
+                <controls:TextBlock
+                    FontSize="20"
+                    FontWeight="SemiBold"
+                    Text="{Binding Name}"
+                    TextWrapping="Wrap" />
+
+                <controls:StackPanel
+                    Grid.Row="1"
+                    Spacing="4">
+                    <controls:TextBlock
+                        FontWeight="SemiBold"
+                        Text="Provider GUID" />
+                    <controls:TextBlock
+                        FontFamily="Consolas"
+                        Text="{Binding IdText}"
+                        TextWrapping="Wrap" />
+                </controls:StackPanel>
+
+                <controls:StackPanel
+                    Grid.Row="2"
+                    Spacing="4">
+                    <controls:TextBlock
+                        FontWeight="SemiBold"
+                        Text="Schema source" />
+                    <controls:TextBlock Text="{Binding SchemaSource}" />
+                </controls:StackPanel>
+
+                <controls:TextBlock
+                    Grid.Row="3"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="Additional metadata such as keywords, levels, tasks, opcodes, and event descriptors will be added by the metadata parser roadmap items."
+                    TextWrapping="Wrap" />
+
+                <controls:TextBlock
+                    Grid.Row="4"
+                    VerticalAlignment="Bottom"
+                    Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                    Text="{Binding DataContext.ErrorMessage, ElementName=Root}"
+                    TextWrapping="Wrap" />
+            </controls:Grid>
+        </controls:Grid>
+    </controls:Grid>
+</Window>
