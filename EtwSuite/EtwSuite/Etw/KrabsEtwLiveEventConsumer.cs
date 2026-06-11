@@ -154,7 +154,7 @@ public sealed class KrabsEtwLiveEventConsumer : IEtwLiveEventConsumer
             DateTimeOffset.Now,
             string.IsNullOrWhiteSpace(record.ProviderName) ? _providerName : record.ProviderName,
             metadata.ProviderId,
-            string.IsNullOrWhiteSpace(record.Name) ? record.TaskName : record.Name,
+            ResolveEventName(record, metadata),
             metadata.Id,
             metadata.Version,
             metadata.Opcode,
@@ -163,6 +163,27 @@ public sealed class KrabsEtwLiveEventConsumer : IEtwLiveEventConsumer
             ResolveProcessName(processId),
             metadata.ThreadId,
             ReadPayload(record));
+    }
+
+    private static string ResolveEventName(IEventRecord record, IEventRecordMetadata metadata)
+    {
+        if (IsMeaningfulEventLabel(record.Name))
+        {
+            return record.Name;
+        }
+
+        if (IsMeaningfulEventLabel(record.TaskName))
+        {
+            return record.TaskName;
+        }
+
+        return $"Event {metadata.Id}";
+    }
+
+    private static bool IsMeaningfulEventLabel(string? value)
+    {
+        return !string.IsNullOrWhiteSpace(value)
+            && !value.StartsWith("Uncategorized", StringComparison.OrdinalIgnoreCase);
     }
 
     private IReadOnlyList<EtwPayloadValue> ReadPayload(IEventRecord record)

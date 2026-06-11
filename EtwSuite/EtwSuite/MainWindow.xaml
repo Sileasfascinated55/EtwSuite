@@ -187,7 +187,7 @@
                                     </controls:ListView.ItemContainerStyle>
                                     <controls:ListView.Header>
                                         <controls:Grid
-                                            Padding="48,8,12,8"
+                                            Padding="0,8,12,8"
                                             ColumnSpacing="12"
                                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                                             <controls:Grid.ColumnDefinitions>
@@ -212,7 +212,7 @@
                                                 <controls:Expander.Header>
                                                     <controls:Grid
                                                         MinHeight="36"
-                                                        Padding="0,6,12,6"
+                                                        Padding="48,6,12,6"
                                                         ColumnSpacing="12"
                                                         HorizontalAlignment="Stretch">
                                                         <controls:Grid.ColumnDefinitions>
@@ -452,8 +452,8 @@
                                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                                 <controls:Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="420" />
+                                    <ColumnDefinition Width="420" />
                                     <ColumnDefinition Width="64" />
                                     <ColumnDefinition Width="72" />
                                     <ColumnDefinition Width="72" />
@@ -487,8 +487,8 @@
                                             HorizontalAlignment="Stretch">
                                             <controls:Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="100" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="420" />
+                                                <ColumnDefinition Width="420" />
                                                 <ColumnDefinition Width="64" />
                                                 <ColumnDefinition Width="72" />
                                                 <ColumnDefinition Width="72" />
