@@ -24,11 +24,19 @@
                 x:Name="ListProvidersNavigationItem"
                 Content="List Providers"
                 IsSelected="True"
-                Tag="ListProviders" />
+                Tag="ListProviders">
+                <controls:NavigationViewItem.Icon>
+                    <controls:SymbolIcon Symbol="List" />
+                </controls:NavigationViewItem.Icon>
+            </controls:NavigationViewItem>
             <controls:NavigationViewItem
                 x:Name="ConsumeProviderNavigationItem"
                 Content="Consume Provider"
-                Tag="ConsumeProvider" />
+                Tag="ConsumeProvider">
+                <controls:NavigationViewItem.Icon>
+                    <controls:FontIcon Glyph="&#xE9D9;" />
+                </controls:NavigationViewItem.Icon>
+            </controls:NavigationViewItem>
         </controls:NavigationView.MenuItems>
 
         <controls:Grid Padding="20">
@@ -268,6 +276,7 @@
                 <controls:Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </controls:Grid.RowDefinitions>
 
@@ -276,6 +285,9 @@
                         FontSize="22"
                         FontWeight="SemiBold"
                         Text="Consume Provider" />
+                    <controls:TextBlock
+                        FontWeight="SemiBold"
+                        Text="Selected provider" />
                     <controls:TextBlock
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Text="{Binding SelectedProviderText}"
@@ -288,7 +300,6 @@
                     RowSpacing="8">
                     <controls:Grid.ColumnDefinitions>
                         <ColumnDefinition Width="320" />
-                        <ColumnDefinition Width="260" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -298,26 +309,47 @@
                         <RowDefinition Height="Auto" />
                     </controls:Grid.RowDefinitions>
 
-                    <controls:TextBox
-                        Header="Provider search"
-                        PlaceholderText="Provider name or GUID"
-                        TextChanged="ConsumeSearchTextBox_TextChanged" />
-
-                    <controls:ComboBox
-                        Grid.Column="1"
-                        Header="Provider"
-                        DisplayMemberPath="Name"
-                        ItemsSource="{Binding Providers}"
-                        SelectedItem="{Binding SelectedProvider, Mode=TwoWay}" />
+                    <controls:StackPanel Spacing="6">
+                        <controls:TextBox
+                            Header="Provider search"
+                            PlaceholderText="Provider name or GUID"
+                            TextChanged="ConsumeSearchTextBox_TextChanged" />
+                        <controls:ListView
+                            MaxHeight="160"
+                            ItemsSource="{Binding Providers}"
+                            SelectedItem="{Binding SelectedProvider, Mode=TwoWay}"
+                            SelectionMode="Single">
+                            <controls:ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <controls:Grid Padding="4,3" RowSpacing="2">
+                                        <controls:Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </controls:Grid.RowDefinitions>
+                                        <controls:TextBlock
+                                            FontWeight="SemiBold"
+                                            Text="{Binding Name}"
+                                            TextTrimming="CharacterEllipsis" />
+                                        <controls:TextBlock
+                                            Grid.Row="1"
+                                            FontSize="12"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Text="{Binding Id}"
+                                            TextTrimming="CharacterEllipsis" />
+                                    </controls:Grid>
+                                </DataTemplate>
+                            </controls:ListView.ItemTemplate>
+                        </controls:ListView>
+                    </controls:StackPanel>
 
                     <controls:Button
-                        Grid.Column="2"
+                        Grid.Column="1"
                         VerticalAlignment="Bottom"
                         Click="StartStopConsumingButton_Click"
                         Content="{Binding StartStopText}" />
 
                     <controls:ComboBox
-                        Grid.Column="3"
+                        Grid.Column="2"
                         Header="Export to"
                         IsEnabled="False"
                         ItemsSource="{Binding ExportFormats}"
@@ -325,10 +357,10 @@
                         controls:ToolTipService.ToolTip="Export is planned for a later roadmap stage." />
 
                     <controls:StackPanel
-                        Grid.Column="4"
+                        Grid.Column="3"
                         VerticalAlignment="Bottom"
                         Spacing="2">
-                        <controls:TextBlock Text="{Binding EventCountText}" />
+                        <controls:TextBlock Text="{Binding TotalEventCountText}" />
                         <controls:TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             Text="{Binding DroppedEventsText}" />
@@ -336,14 +368,53 @@
 
                     <controls:TextBlock
                         Grid.Row="1"
-                        Grid.ColumnSpan="5"
+                        Grid.ColumnSpan="4"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Text="{Binding StatusMessage}"
                         TextWrapping="Wrap" />
                 </controls:Grid>
 
-                <controls:Border
+                <controls:Grid
                     Grid.Row="2"
+                    ColumnSpacing="8">
+                    <controls:Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </controls:Grid.ColumnDefinitions>
+
+                    <controls:TextBox
+                        Width="120"
+                        Header="Events per page"
+                        Text="{Binding EventsPerPage, Mode=TwoWay}"
+                        TextChanged="EventsPerPageTextBox_TextChanged" />
+                    <controls:Button
+                        Grid.Column="1"
+                        VerticalAlignment="Bottom"
+                        Click="PreviousEventsPageButton_Click"
+                        Content="Previous"
+                        IsEnabled="{Binding CanGoToPreviousPage}" />
+                    <controls:Button
+                        Grid.Column="2"
+                        VerticalAlignment="Bottom"
+                        Click="NextEventsPageButton_Click"
+                        Content="Next"
+                        IsEnabled="{Binding CanGoToNextPage}" />
+                    <controls:StackPanel
+                        Grid.Column="3"
+                        VerticalAlignment="Bottom"
+                        Orientation="Horizontal"
+                        Spacing="12">
+                        <controls:TextBlock Text="{Binding PageStatusText}" />
+                        <controls:TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{Binding EventCountText}" />
+                    </controls:StackPanel>
+                </controls:Grid>
+
+                <controls:Border
+                    Grid.Row="3"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     CornerRadius="4">
@@ -428,26 +499,22 @@
                                         </controls:Grid.RowDefinitions>
                                         <controls:Grid Padding="0,6,0,4" ColumnSpacing="12">
                                             <controls:Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="2*" />
-                                                <ColumnDefinition Width="160" />
-                                                <ColumnDefinition Width="3*" />
                                             </controls:Grid.ColumnDefinitions>
                                             <controls:TextBlock FontWeight="SemiBold" Text="Name" />
-                                            <controls:TextBlock Grid.Column="1" FontWeight="SemiBold" Text="Type" />
-                                            <controls:TextBlock Grid.Column="2" FontWeight="SemiBold" Text="Value" />
+                                            <controls:TextBlock Grid.Column="1" HorizontalAlignment="Right" FontWeight="SemiBold" Text="Value" />
                                         </controls:Grid>
                                         <controls:ItemsControl Grid.Row="1" ItemsSource="{Binding Parameters}">
                                             <controls:ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <controls:Grid Padding="0,3,0,3" ColumnSpacing="12">
                                                         <controls:Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
                                                             <ColumnDefinition Width="2*" />
-                                                            <ColumnDefinition Width="160" />
-                                                            <ColumnDefinition Width="3*" />
                                                         </controls:Grid.ColumnDefinitions>
                                                         <controls:TextBlock IsTextSelectionEnabled="True" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                                        <controls:TextBlock Grid.Column="1" IsTextSelectionEnabled="True" Text="{Binding Type}" TextTrimming="CharacterEllipsis" />
-                                                        <controls:TextBlock Grid.Column="2" IsTextSelectionEnabled="True" Text="{Binding Value}" TextTrimming="CharacterEllipsis" />
+                                                        <controls:TextBlock Grid.Column="1" HorizontalAlignment="Right" IsTextSelectionEnabled="True" Text="{Binding Value}" TextTrimming="CharacterEllipsis" />
                                                     </controls:Grid>
                                                 </DataTemplate>
                                             </controls:ItemsControl.ItemTemplate>

@@ -130,6 +130,24 @@ namespace EtwSuite
             }
         }
 
+        private void EventsPerPageTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (int.TryParse(((TextBox)sender).Text, out int eventsPerPage))
+            {
+                ConsumeProviderViewModel.EventsPerPage = eventsPerPage;
+            }
+        }
+
+        private void PreviousEventsPageButton_Click(object sender, RoutedEventArgs e)
+        {
+            ConsumeProviderViewModel.GoToPreviousPage();
+        }
+
+        private void NextEventsPageButton_Click(object sender, RoutedEventArgs e)
+        {
+            ConsumeProviderViewModel.GoToNextPage();
+        }
+
         private async void MainWindow_Closed(object sender, WindowEventArgs args)
         {
             ProvidersViewModel.PropertyChanged -= ProvidersViewModel_PropertyChanged;

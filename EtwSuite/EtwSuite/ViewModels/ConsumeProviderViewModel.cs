@@ -8,8 +8,10 @@ namespace EtwSuite.ViewModels;
 public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposable
 {
     private const int MaxDisplayedEvents = 10_000;
+    private const int DefaultEventsPerPage = 100;
     private readonly IEtwProviderCatalog _providerCatalog;
     private readonly DispatcherQueue _dispatcherQueue;
+    private readonly List<LiveEventViewModel> _eventBuffer = new();
     private IReadOnlyList<EtwProviderInfo> _allProviders = Array.Empty<EtwProviderInfo>();
     private IEtwLiveEventConsumer? _consumer;
     private CancellationTokenSource? _consumeCancellation;
@@ -18,6 +20,8 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
     private string? _statusMessage = "Select a provider to start consuming.";
     private EtwTraceSessionState _state = EtwTraceSessionState.Stopped;
     private long _droppedDisplayEvents;
+    private int _eventsPerPage = DefaultEventsPerPage;
+    private int _currentPage = 1;
 
     public ConsumeProviderViewModel(IEtwProviderCatalog providerCatalog)
     {
@@ -87,10 +91,48 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
     public string StartStopText => CanStop ? "Stop Consuming" : "Start Consuming";
 
     public string EventCountText => $"{Events.Count:N0} events";
+    public string TotalEventCountText => $"{_eventBuffer.Count:N0} total events";
 
     public string DroppedEventsText => _droppedDisplayEvents == 0
         ? string.Empty
         : $"{_droppedDisplayEvents:N0} older events dropped from view";
+
+    public int EventsPerPage
+    {
+        get => _eventsPerPage;
+        set
+        {
+            int normalizedValue = Math.Clamp(value, 25, 1_000);
+            if (SetProperty(ref _eventsPerPage, normalizedValue))
+            {
+                CurrentPage = Math.Min(CurrentPage, TotalPages);
+                RefreshCurrentPage();
+                OnPagingPropertiesChanged();
+            }
+        }
+    }
+
+    public int CurrentPage
+    {
+        get => _currentPage;
+        private set
+        {
+            int normalizedValue = Math.Clamp(value, 1, TotalPages);
+            if (SetProperty(ref _currentPage, normalizedValue))
+            {
+                RefreshCurrentPage();
+                OnPagingPropertiesChanged();
+            }
+        }
+    }
+
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling(_eventBuffer.Count / (double)EventsPerPage));
+
+    public bool CanGoToPreviousPage => CurrentPage > 1;
+
+    public bool CanGoToNextPage => CurrentPage < TotalPages;
+
+    public string PageStatusText => $"Page {CurrentPage:N0} of {TotalPages:N0}";
 
     public async Task LoadProvidersAsync(CancellationToken cancellationToken)
     {
@@ -108,10 +150,14 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
 
         State = EtwTraceSessionState.Starting;
         StatusMessage = "Starting trace session...";
+        _eventBuffer.Clear();
         Events.Clear();
+        _currentPage = 1;
         _droppedDisplayEvents = 0;
         OnPropertyChanged(nameof(EventCountText));
+        OnPropertyChanged(nameof(TotalEventCountText));
         OnPropertyChanged(nameof(DroppedEventsText));
+        OnPagingPropertiesChanged();
 
         _consumeCancellation?.Cancel();
         _consumeCancellation?.Dispose();
@@ -207,20 +253,68 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
     {
         _dispatcherQueue.TryEnqueue(() =>
         {
+            bool wasOnLastPage = CurrentPage == TotalPages;
+
             foreach (EtwLiveEventRecord record in records)
             {
-                Events.Add(new LiveEventViewModel(record));
+                _eventBuffer.Add(new LiveEventViewModel(record));
             }
 
-            while (Events.Count > MaxDisplayedEvents)
+            while (_eventBuffer.Count > MaxDisplayedEvents)
             {
-                Events.RemoveAt(0);
+                _eventBuffer.RemoveAt(0);
                 _droppedDisplayEvents++;
             }
 
+            if (wasOnLastPage)
+            {
+                _currentPage = TotalPages;
+                OnPropertyChanged(nameof(CurrentPage));
+            }
+
+            RefreshCurrentPage();
             OnPropertyChanged(nameof(EventCountText));
+            OnPropertyChanged(nameof(TotalEventCountText));
             OnPropertyChanged(nameof(DroppedEventsText));
+            OnPagingPropertiesChanged();
         });
+    }
+
+    public void GoToPreviousPage()
+    {
+        if (CanGoToPreviousPage)
+        {
+            CurrentPage--;
+        }
+    }
+
+    public void GoToNextPage()
+    {
+        if (CanGoToNextPage)
+        {
+            CurrentPage++;
+        }
+    }
+
+    private void RefreshCurrentPage()
+    {
+        Events.Clear();
+
+        int skip = (CurrentPage - 1) * EventsPerPage;
+        foreach (LiveEventViewModel liveEvent in _eventBuffer.Skip(skip).Take(EventsPerPage))
+        {
+            Events.Add(liveEvent);
+        }
+
+        OnPropertyChanged(nameof(EventCountText));
+    }
+
+    private void OnPagingPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(TotalPages));
+        OnPropertyChanged(nameof(CanGoToPreviousPage));
+        OnPropertyChanged(nameof(CanGoToNextPage));
+        OnPropertyChanged(nameof(PageStatusText));
     }
 
     private void ApplyFilter()
@@ -308,4 +402,3 @@ public sealed class LivePayloadValueViewModel
 
     public string Value { get; }
 }
-
