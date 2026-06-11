@@ -9,6 +9,7 @@ public sealed class ProviderDetailsViewModel : ObservableObject
     private string _schemaSearchText = string.Empty;
     private bool _isSchemaLoading;
     private string? _schemaStatus;
+    private SchemaEventViewModel? _selectedSchemaItem;
 
     public ProviderDetailsViewModel(EtwProviderInfo provider)
     {
@@ -26,6 +27,12 @@ public sealed class ProviderDetailsViewModel : ObservableObject
     public string IdText => Id.ToString("D");
 
     public ObservableCollection<SchemaEventViewModel> SchemaItems { get; } = new();
+
+    public SchemaEventViewModel? SelectedSchemaItem
+    {
+        get => _selectedSchemaItem;
+        set => SetProperty(ref _selectedSchemaItem, value);
+    }
 
     public string SchemaSearchText
     {
@@ -76,6 +83,7 @@ public sealed class ProviderDetailsViewModel : ObservableObject
         IsSchemaLoading = true;
         SchemaStatus = null;
         _allEvents = Array.Empty<EtwSchemaEvent>();
+        SelectedSchemaItem = null;
         SchemaItems.Clear();
         OnPropertyChanged(nameof(SchemaCountText));
     }
@@ -89,6 +97,7 @@ public sealed class ProviderDetailsViewModel : ObservableObject
     public void SetSchemaError(string message)
     {
         _allEvents = Array.Empty<EtwSchemaEvent>();
+        SelectedSchemaItem = null;
         SchemaItems.Clear();
         SchemaStatus = message;
         OnPropertyChanged(nameof(SchemaCountText));
@@ -129,6 +138,8 @@ public sealed class ProviderDetailsViewModel : ObservableObject
         {
             SchemaItems.Add(new SchemaEventViewModel(schemaEvent));
         }
+
+        SelectedSchemaItem = SchemaItems.FirstOrDefault();
 
         OnPropertyChanged(nameof(SchemaCountText));
     }

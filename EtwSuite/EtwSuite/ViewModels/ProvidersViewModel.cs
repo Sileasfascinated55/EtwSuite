@@ -14,6 +14,7 @@ public sealed class ProvidersViewModel : ObservableObject
     private string? _errorMessage;
     private bool _isLoading;
     private bool _showMissingProviders;
+    private long _schemaLoadVersion;
 
     public ProvidersViewModel(IEtwProviderCatalog providerCatalog)
     {
@@ -111,6 +112,7 @@ public sealed class ProvidersViewModel : ObservableObject
 
     public async Task LoadSelectedProviderSchemaAsync(CancellationToken cancellationToken)
     {
+        long loadVersion = Interlocked.Increment(ref _schemaLoadVersion);
         EtwProviderInfo? provider = SelectedProvider;
         ProviderDetailsViewModel? details = SelectedProviderDetails;
         if (provider is null || details is null)
@@ -123,7 +125,7 @@ public sealed class ProvidersViewModel : ObservableObject
         try
         {
             EtwProviderSchema schema = await _providerCatalog.GetProviderSchemaAsync(provider, cancellationToken);
-            if (SelectedProvider == provider && SelectedProviderDetails == details)
+            if (loadVersion == _schemaLoadVersion && SelectedProvider == provider && SelectedProviderDetails == details)
             {
                 details.SetSchema(schema);
                 SetProviderMissing(provider, schema.Events.Count == 0);
@@ -135,14 +137,14 @@ public sealed class ProvidersViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            if (SelectedProvider == provider && SelectedProviderDetails == details)
+            if (loadVersion == _schemaLoadVersion && SelectedProvider == provider && SelectedProviderDetails == details)
             {
                 details.SetSchemaError(ex.Message);
             }
         }
         finally
         {
-            if (SelectedProvider == provider && SelectedProviderDetails == details)
+            if (loadVersion == _schemaLoadVersion && SelectedProvider == provider && SelectedProviderDetails == details)
             {
                 details.EndSchemaLoad();
             }

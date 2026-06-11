@@ -222,9 +222,7 @@ public sealed class EtwProviderCatalog : IEtwProviderCatalog
         using var stringReader = new StringReader(manifestXml);
         using XmlReader reader = XmlReader.Create(stringReader, settings);
         XDocument manifest = XDocument.Load(reader, LoadOptions.None);
-        XElement? providerElement = manifest
-            .Descendants()
-            .FirstOrDefault(element => element.Name.LocalName == "provider");
+        XElement? providerElement = FindProviderElement(manifest, provider);
 
         if (providerElement is null)
         {
@@ -238,11 +236,23 @@ public sealed class EtwProviderCatalog : IEtwProviderCatalog
         Dictionary<string, string> opcodesByValue = ReadValueNameMap(providerElement, "opcodes", "opcode");
         Dictionary<string, string> levelsByValue = ReadValueNameMap(providerElement, "levels", "level");
         Dictionary<string, IReadOnlyList<EtwSchemaParameter>> templates = ReadTemplates(providerElement);
+        if (templates.Count == 0)
+        {
+            templates = ReadTemplates(manifest.Root ?? providerElement);
+        }
 
         var events = new List<EtwSchemaEvent>();
-        foreach (XElement eventElement in providerElement
+        IEnumerable<XElement> eventElements = providerElement
             .Descendants()
-            .Where(element => element.Name.LocalName == "event"))
+            .Where(element => element.Name.LocalName == "event");
+        if (!eventElements.Any())
+        {
+            eventElements = manifest
+                .Descendants()
+                .Where(element => element.Name.LocalName == "event");
+        }
+
+        foreach (XElement eventElement in eventElements)
         {
             string idText = ReadAttribute(eventElement, "value", "0");
             ushort id = ushort.TryParse(idText, out ushort parsedId) ? parsedId : (ushort)0;
@@ -264,6 +274,19 @@ public sealed class EtwProviderCatalog : IEtwProviderCatalog
         }
 
         return new EtwProviderSchema(provider, events, Array.Empty<string>());
+    }
+
+    private static XElement? FindProviderElement(XDocument manifest, EtwProviderInfo provider)
+    {
+        return manifest
+            .Descendants()
+            .Where(element => element.Name.LocalName == "provider")
+            .FirstOrDefault(element =>
+                string.Equals(ReadAttribute(element, "guid", string.Empty).Trim('{', '}'), provider.Id.ToString("D"), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(ReadAttribute(element, "name", string.Empty), provider.Name, StringComparison.OrdinalIgnoreCase))
+            ?? manifest
+                .Descendants()
+                .FirstOrDefault(element => element.Name.LocalName == "provider");
     }
 
     private static Dictionary<string, string> ReadValueNameMap(

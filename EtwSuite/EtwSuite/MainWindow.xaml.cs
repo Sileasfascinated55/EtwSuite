@@ -1,7 +1,9 @@
+using EtwSuite.Core;
 using EtwSuite.Etw;
 using EtwSuite.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using System.ComponentModel;
 
 namespace EtwSuite
 {
@@ -16,6 +18,7 @@ namespace EtwSuite
 
             ViewModel = new ProvidersViewModel(new EtwProviderCatalog());
             Root.DataContext = ViewModel;
+            ViewModel.PropertyChanged += ViewModel_PropertyChanged;
 
             Closed += MainWindow_Closed;
         }
@@ -29,20 +32,36 @@ namespace EtwSuite
             try
             {
                 await ViewModel.LoadProvidersAsync(_loadCancellation.Token);
-                await LoadSelectedProviderSchemaAsync();
             }
             catch (OperationCanceledException)
             {
             }
         }
 
-        private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        private async void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
+            EtwProviderInfo? previousProvider = ViewModel.SelectedProvider;
             ViewModel.SearchText = ((TextBox)sender).Text;
+
+            if (ViewModel.SelectedProvider is not null && ViewModel.SelectedProvider != previousProvider)
+            {
+                try
+                {
+                    await LoadSelectedProviderSchemaAsync();
+                }
+                catch (OperationCanceledException)
+                {
+                }
+            }
         }
 
-        private async void ProvidersListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
+            if (e.PropertyName != nameof(ProvidersViewModel.SelectedProvider))
+            {
+                return;
+            }
+
             try
             {
                 await LoadSelectedProviderSchemaAsync();
@@ -60,8 +79,20 @@ namespace EtwSuite
             }
         }
 
+        private async void ProvidersListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            try
+            {
+                await LoadSelectedProviderSchemaAsync();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
         private void MainWindow_Closed(object sender, WindowEventArgs args)
         {
+            ViewModel.PropertyChanged -= ViewModel_PropertyChanged;
             _loadCancellation.Cancel();
             _schemaLoadCancellation?.Cancel();
             _schemaLoadCancellation?.Dispose();
