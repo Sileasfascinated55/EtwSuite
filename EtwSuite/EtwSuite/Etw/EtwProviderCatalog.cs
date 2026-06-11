@@ -4,7 +4,19 @@ using EtwSuite.Etw.Native;
 
 namespace EtwSuite.Etw;
 
-public sealed class TdhEtwProviderCatalog : IEtwProviderCatalog
+public sealed class EtwProviderEnumerationException : Exception
+{
+    public EtwProviderEnumerationException(uint errorCode)
+        : base($"Failed to enumerate ETW providers. TDH returned Win32 error {errorCode}.")
+    {
+        ErrorCode = errorCode;
+    }
+
+    public uint ErrorCode { get; }
+}
+
+
+public sealed class EtwProviderCatalog : IEtwProviderCatalog
 {
     public Task<IReadOnlyList<EtwProviderInfo>> EnumerateProvidersAsync(CancellationToken cancellationToken)
     {
@@ -68,11 +80,11 @@ public sealed class TdhEtwProviderCatalog : IEtwProviderCatalog
     {
         if (providerNameOffset == 0)
         {
-            return "(unnamed provider)";
+            return "(unknown provider)";
         }
 
         IntPtr providerNameAddress = IntPtr.Add(buffer, checked((int)providerNameOffset));
-        return Marshal.PtrToStringUni(providerNameAddress) ?? "(unnamed provider)";
+        return Marshal.PtrToStringUni(providerNameAddress) ?? "(unknown provider)";
     }
 
     private static EtwProviderSchemaSource MapSchemaSource(uint schemaSource)

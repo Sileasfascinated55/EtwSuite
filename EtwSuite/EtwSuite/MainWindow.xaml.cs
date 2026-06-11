@@ -13,7 +13,7 @@ namespace EtwSuite
         {
             InitializeComponent();
 
-            ViewModel = new ProvidersViewModel(new TdhEtwProviderCatalog());
+            ViewModel = new ProvidersViewModel(new EtwProviderCatalog());
             Root.DataContext = ViewModel;
 
             Closed += MainWindow_Closed;
