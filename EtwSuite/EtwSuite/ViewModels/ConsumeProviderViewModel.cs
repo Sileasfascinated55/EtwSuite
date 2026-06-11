@@ -1,4 +1,7 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Text;
+using System.Text.Json;
 using EtwSuite.Core;
 using EtwSuite.Etw;
 using Microsoft.UI.Dispatching;
@@ -22,6 +25,7 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
     private long _droppedDisplayEvents;
     private int _eventsPerPage = DefaultEventsPerPage;
     private int _currentPage = 1;
+    private string _selectedExportFormat = "JSON";
 
     public ConsumeProviderViewModel(IEtwProviderCatalog providerCatalog)
     {
@@ -33,7 +37,13 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
 
     public ObservableCollection<LiveEventViewModel> Events { get; } = new();
 
-    public IReadOnlyList<string> ExportFormats { get; } = new[] { "JSON", "CSV", "ETL", "EVTX" };
+    public IReadOnlyList<string> ExportFormats { get; } = new[] { "JSON", "CSV" };
+
+    public string SelectedExportFormat
+    {
+        get => _selectedExportFormat;
+        set => SetProperty(ref _selectedExportFormat, value);
+    }
 
     public EtwProviderInfo? SelectedProvider
     {
@@ -134,11 +144,12 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
 
     public string PageStatusText => $"Page {CurrentPage:N0} of {TotalPages:N0}";
 
+    public bool HasEvents => _eventBuffer.Count > 0;
+
     public async Task LoadProvidersAsync(CancellationToken cancellationToken)
     {
         _allProviders = await _providerCatalog.EnumerateProvidersAsync(cancellationToken);
         ApplyFilter();
-        SelectedProvider = Providers.FirstOrDefault();
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -156,6 +167,7 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
         _droppedDisplayEvents = 0;
         OnPropertyChanged(nameof(EventCountText));
         OnPropertyChanged(nameof(TotalEventCountText));
+        OnPropertyChanged(nameof(HasEvents));
         OnPropertyChanged(nameof(DroppedEventsText));
         OnPagingPropertiesChanged();
 
@@ -275,9 +287,64 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
             RefreshCurrentPage();
             OnPropertyChanged(nameof(EventCountText));
             OnPropertyChanged(nameof(TotalEventCountText));
+            OnPropertyChanged(nameof(HasEvents));
             OnPropertyChanged(nameof(DroppedEventsText));
             OnPagingPropertiesChanged();
         });
+    }
+
+    public void SelectFirstMatchingProvider()
+    {
+        SelectedProvider = Providers.FirstOrDefault();
+    }
+
+    public IReadOnlyList<LiveEventViewModel> GetEventSnapshot()
+    {
+        return _eventBuffer.ToArray();
+    }
+
+    public string CreateExportContent()
+    {
+        IReadOnlyList<LiveEventViewModel> events = GetEventSnapshot();
+        if (events.Count == 0)
+        {
+            StatusMessage = "There are no events to export.";
+            return string.Empty;
+        }
+
+        string format = SelectedExportFormat.ToUpperInvariant();
+        return format switch
+        {
+            "JSON" => CreateJson(events),
+            "CSV" => CreateCsv(events),
+            _ => throw new NotSupportedException($"{SelectedExportFormat} export is not supported yet."),
+        };
+    }
+
+    public void ReportExported()
+    {
+        int eventCount = GetEventSnapshot().Count;
+        if (eventCount > 0)
+        {
+            StatusMessage = $"Exported {eventCount:N0} events to {SelectedExportFormat}.";
+        }
+    }
+
+    public async Task ExportAsync(string filePath, CancellationToken cancellationToken)
+    {
+        string content = CreateExportContent();
+        if (string.IsNullOrEmpty(content))
+        {
+            return;
+        }
+
+        await File.WriteAllTextAsync(filePath, content, Encoding.UTF8, cancellationToken);
+        ReportExported();
+    }
+
+    public void ReportError(string message)
+    {
+        StatusMessage = message;
     }
 
     public void GoToPreviousPage()
@@ -317,6 +384,74 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
         OnPropertyChanged(nameof(PageStatusText));
     }
 
+    private static string CreateJson(IReadOnlyList<LiveEventViewModel> events)
+    {
+        var exportEvents = events.Select(liveEvent => new
+        {
+            liveEvent.Time,
+            liveEvent.Provider,
+            liveEvent.Event,
+            liveEvent.Id,
+            liveEvent.Version,
+            liveEvent.Opcode,
+            liveEvent.Level,
+            liveEvent.ProcessId,
+            liveEvent.ProcessName,
+            liveEvent.ThreadId,
+            Parameters = liveEvent.Parameters.Select(parameter => new
+            {
+                parameter.Name,
+                parameter.Type,
+                parameter.Value,
+            }),
+        });
+
+        return JsonSerializer.Serialize(
+            exportEvents,
+            new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private static string CreateCsv(IReadOnlyList<LiveEventViewModel> events)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Time,Provider,Event,Id,Version,Opcode,Level,ProcessId,ProcessName,ThreadId,Parameters");
+
+        foreach (LiveEventViewModel liveEvent in events)
+        {
+            string parameters = string.Join(
+                "; ",
+                liveEvent.Parameters.Select(parameter => string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"{parameter.Name}={parameter.Value}")));
+
+            builder
+                .Append(Csv(liveEvent.Time)).Append(',')
+                .Append(Csv(liveEvent.Provider)).Append(',')
+                .Append(Csv(liveEvent.Event)).Append(',')
+                .Append(liveEvent.Id.ToString(CultureInfo.InvariantCulture)).Append(',')
+                .Append(liveEvent.Version.ToString(CultureInfo.InvariantCulture)).Append(',')
+                .Append(liveEvent.Opcode.ToString(CultureInfo.InvariantCulture)).Append(',')
+                .Append(liveEvent.Level.ToString(CultureInfo.InvariantCulture)).Append(',')
+                .Append(liveEvent.ProcessId.ToString(CultureInfo.InvariantCulture)).Append(',')
+                .Append(Csv(liveEvent.ProcessName)).Append(',')
+                .Append(liveEvent.ThreadId.ToString(CultureInfo.InvariantCulture)).Append(',')
+                .Append(Csv(parameters))
+                .AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
+    private static string Csv(string value)
+    {
+        if (!value.Contains(',') && !value.Contains('"') && !value.Contains('\r') && !value.Contains('\n'))
+        {
+            return value;
+        }
+
+        return $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\"";
+    }
+
     private void ApplyFilter()
     {
         EtwProviderInfo? previousSelection = SelectedProvider;
@@ -338,7 +473,7 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
 
         SelectedProvider = previousSelection is not null && Providers.Contains(previousSelection)
             ? previousSelection
-            : Providers.FirstOrDefault();
+            : null;
     }
 }
 

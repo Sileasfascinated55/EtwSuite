@@ -3,7 +3,11 @@ using EtwSuite.Etw;
 using EtwSuite.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using System.ComponentModel;
+using Windows.Storage.Pickers;
+using Windows.System;
+using WinRT.Interop;
 
 namespace EtwSuite
 {
@@ -72,6 +76,28 @@ namespace EtwSuite
             }
         }
 
+        private async void ProviderSearchTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key != VirtualKey.Enter)
+            {
+                return;
+            }
+
+            e.Handled = true;
+            if (ProvidersViewModel.SelectedProvider is null)
+            {
+                return;
+            }
+
+            try
+            {
+                await LoadSelectedProviderSchemaAsync();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
         private async void ProvidersViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName != nameof(ProvidersViewModel.SelectedProvider))
@@ -96,6 +122,14 @@ namespace EtwSuite
             }
         }
 
+        private void SchemaSearchTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key == VirtualKey.Enter)
+            {
+                e.Handled = true;
+            }
+        }
+
         private async void ProvidersListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             try
@@ -110,6 +144,26 @@ namespace EtwSuite
         private void ConsumeSearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             ConsumeProviderViewModel.SearchText = ((TextBox)sender).Text;
+            UpdateConsumeProviderMatchesVisibility();
+        }
+
+        private void ConsumeSearchTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key != VirtualKey.Enter)
+            {
+                return;
+            }
+
+            e.Handled = true;
+            ConsumeProviderViewModel.SelectFirstMatchingProvider();
+            UpdateConsumeProviderSearchText();
+            UpdateConsumeProviderMatchesVisibility();
+        }
+
+        private void ConsumeProvidersListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateConsumeProviderSearchText();
+            UpdateConsumeProviderMatchesVisibility();
         }
 
         private async void StartStopConsumingButton_Click(object sender, RoutedEventArgs e)
@@ -146,6 +200,74 @@ namespace EtwSuite
         private void NextEventsPageButton_Click(object sender, RoutedEventArgs e)
         {
             ConsumeProviderViewModel.GoToNextPage();
+        }
+
+        private async void ExportEventsButton_Click(object sender, RoutedEventArgs e)
+        {
+            string format = ConsumeProviderViewModel.SelectedExportFormat;
+            var picker = new FileSavePicker
+            {
+                SuggestedFileName = $"etw-events-{DateTimeOffset.Now:yyyyMMdd-HHmmss}",
+            };
+
+            if (format == "CSV")
+            {
+                picker.FileTypeChoices.Add("CSV", new List<string> { ".csv" });
+            }
+            else
+            {
+                picker.FileTypeChoices.Add("JSON", new List<string> { ".json" });
+            }
+
+            InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(this));
+            Windows.Storage.StorageFile? file = await picker.PickSaveFileAsync();
+            if (file is null)
+            {
+                return;
+            }
+
+            try
+            {
+                string content = ConsumeProviderViewModel.CreateExportContent();
+                if (string.IsNullOrEmpty(content))
+                {
+                    return;
+                }
+
+                await Windows.Storage.FileIO.WriteTextAsync(file, content);
+                ConsumeProviderViewModel.ReportExported();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                ConsumeProviderViewModel.ReportError(ex.Message);
+            }
+        }
+
+        private void UpdateConsumeProviderSearchText()
+        {
+            string? selectedName = ConsumeProviderViewModel.SelectedProvider?.Name;
+            if (string.IsNullOrWhiteSpace(selectedName) || ConsumeProviderSearchTextBox.Text == selectedName)
+            {
+                return;
+            }
+
+            ConsumeProviderSearchTextBox.Text = selectedName;
+            ConsumeProviderSearchTextBox.SelectionStart = ConsumeProviderSearchTextBox.Text.Length;
+        }
+
+        private void UpdateConsumeProviderMatchesVisibility()
+        {
+            string searchText = ConsumeProviderSearchTextBox.Text.Trim();
+            string? selectedName = ConsumeProviderViewModel.SelectedProvider?.Name;
+            bool hasOpenSearch = !string.IsNullOrWhiteSpace(searchText) &&
+                !string.Equals(searchText, selectedName, StringComparison.CurrentCultureIgnoreCase);
+
+            ConsumeProviderMatchesListView.Visibility = hasOpenSearch
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
 
         private async void MainWindow_Closed(object sender, WindowEventArgs args)

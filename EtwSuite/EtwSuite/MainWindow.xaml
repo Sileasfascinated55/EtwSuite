@@ -77,10 +77,12 @@
                         Spacing="12"
                         Margin="0,0,0,8">
                         <controls:TextBox
+                            x:Name="ProviderSearchTextBox"
                             MinWidth="260"
                             Width="320"
                             Header="Search"
                             PlaceholderText="Provider name or GUID"
+                            KeyDown="ProviderSearchTextBox_KeyDown"
                             TextChanged="SearchTextBox_TextChanged" />
                         <controls:CheckBox
                             VerticalAlignment="Bottom"
@@ -163,8 +165,10 @@
                             </controls:Grid.RowDefinitions>
 
                             <controls:TextBox
+                                x:Name="SchemaSearchTextBox"
                                 Header="Search schema"
                                 PlaceholderText="Event, task, id, opcode, level, parameter, or type"
+                                KeyDown="SchemaSearchTextBox_KeyDown"
                                 TextChanged="SchemaSearchTextBox_TextChanged" />
 
                             <controls:Border
@@ -302,45 +306,21 @@
                         <ColumnDefinition Width="320" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </controls:Grid.ColumnDefinitions>
                     <controls:Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                     </controls:Grid.RowDefinitions>
 
-                    <controls:StackPanel Spacing="6">
-                        <controls:TextBox
-                            Header="Provider search"
-                            PlaceholderText="Provider name or GUID"
-                            TextChanged="ConsumeSearchTextBox_TextChanged" />
-                        <controls:ListView
-                            MaxHeight="160"
-                            ItemsSource="{Binding Providers}"
-                            SelectedItem="{Binding SelectedProvider, Mode=TwoWay}"
-                            SelectionMode="Single">
-                            <controls:ListView.ItemTemplate>
-                                <DataTemplate>
-                                    <controls:Grid Padding="4,3" RowSpacing="2">
-                                        <controls:Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </controls:Grid.RowDefinitions>
-                                        <controls:TextBlock
-                                            FontWeight="SemiBold"
-                                            Text="{Binding Name}"
-                                            TextTrimming="CharacterEllipsis" />
-                                        <controls:TextBlock
-                                            Grid.Row="1"
-                                            FontSize="12"
-                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                            Text="{Binding Id}"
-                                            TextTrimming="CharacterEllipsis" />
-                                    </controls:Grid>
-                                </DataTemplate>
-                            </controls:ListView.ItemTemplate>
-                        </controls:ListView>
-                    </controls:StackPanel>
+                    <controls:TextBox
+                        x:Name="ConsumeProviderSearchTextBox"
+                        Header="Provider search"
+                        PlaceholderText="Provider name or GUID"
+                        KeyDown="ConsumeSearchTextBox_KeyDown"
+                        TextChanged="ConsumeSearchTextBox_TextChanged" />
 
                     <controls:Button
                         Grid.Column="1"
@@ -350,25 +330,63 @@
 
                     <controls:ComboBox
                         Grid.Column="2"
+                        VerticalAlignment="Bottom"
                         Header="Export to"
-                        IsEnabled="False"
                         ItemsSource="{Binding ExportFormats}"
-                        SelectedIndex="0"
-                        controls:ToolTipService.ToolTip="Export is planned for a later roadmap stage." />
+                        SelectedItem="{Binding SelectedExportFormat, Mode=TwoWay}" />
+
+                    <controls:Button
+                        Grid.Column="3"
+                        VerticalAlignment="Bottom"
+                        Click="ExportEventsButton_Click"
+                        Content="Export"
+                        IsEnabled="{Binding HasEvents}" />
 
                     <controls:StackPanel
-                        Grid.Column="3"
+                        Grid.Column="4"
                         VerticalAlignment="Bottom"
                         Spacing="2">
                         <controls:TextBlock Text="{Binding TotalEventCountText}" />
                         <controls:TextBlock
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Text="{Binding DroppedEventsText}" />
+                        Text="{Binding DroppedEventsText}" />
                     </controls:StackPanel>
 
-                    <controls:TextBlock
+                    <controls:ListView
+                        x:Name="ConsumeProviderMatchesListView"
                         Grid.Row="1"
-                        Grid.ColumnSpan="4"
+                        MaxHeight="160"
+                        Margin="0,8,0,0"
+                        ItemsSource="{Binding Providers}"
+                        SelectedItem="{Binding SelectedProvider, Mode=TwoWay}"
+                        SelectionChanged="ConsumeProvidersListView_SelectionChanged"
+                        SelectionMode="Single"
+                        Visibility="Collapsed">
+                        <controls:ListView.ItemTemplate>
+                            <DataTemplate>
+                                <controls:Grid Padding="4,3" RowSpacing="2">
+                                    <controls:Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </controls:Grid.RowDefinitions>
+                                    <controls:TextBlock
+                                        FontWeight="SemiBold"
+                                        Text="{Binding Name}"
+                                        TextTrimming="CharacterEllipsis" />
+                                    <controls:TextBlock
+                                        Grid.Row="1"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="{Binding Id}"
+                                        TextTrimming="CharacterEllipsis" />
+                                </controls:Grid>
+                            </DataTemplate>
+                        </controls:ListView.ItemTemplate>
+                    </controls:ListView>
+
+                    <controls:TextBlock
+                        Grid.Row="2"
+                        Grid.ColumnSpan="5"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                         Text="{Binding StatusMessage}"
                         TextWrapping="Wrap" />
@@ -499,22 +517,22 @@
                                         </controls:Grid.RowDefinitions>
                                         <controls:Grid Padding="0,6,0,4" ColumnSpacing="12">
                                             <controls:Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="260" />
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="2*" />
                                             </controls:Grid.ColumnDefinitions>
                                             <controls:TextBlock FontWeight="SemiBold" Text="Name" />
-                                            <controls:TextBlock Grid.Column="1" HorizontalAlignment="Right" FontWeight="SemiBold" Text="Value" />
+                                            <controls:TextBlock Grid.Column="1" FontWeight="SemiBold" Text="Value" />
                                         </controls:Grid>
                                         <controls:ItemsControl Grid.Row="1" ItemsSource="{Binding Parameters}">
                                             <controls:ItemsControl.ItemTemplate>
                                                 <DataTemplate>
                                                     <controls:Grid Padding="0,3,0,3" ColumnSpacing="12">
                                                         <controls:Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="260" />
                                                             <ColumnDefinition Width="*" />
-                                                            <ColumnDefinition Width="2*" />
                                                         </controls:Grid.ColumnDefinitions>
                                                         <controls:TextBlock IsTextSelectionEnabled="True" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                                        <controls:TextBlock Grid.Column="1" HorizontalAlignment="Right" IsTextSelectionEnabled="True" Text="{Binding Value}" TextTrimming="CharacterEllipsis" />
+                                                        <controls:TextBlock Grid.Column="1" IsTextSelectionEnabled="True" Text="{Binding Value}" TextTrimming="CharacterEllipsis" />
                                                     </controls:Grid>
                                                 </DataTemplate>
                                             </controls:ItemsControl.ItemTemplate>
