@@ -41,13 +41,20 @@
                     Text="{Binding ProviderCountText}" />
             </controls:StackPanel>
 
-            <controls:TextBox
+            <controls:StackPanel
                 Grid.Column="1"
-                Width="360"
-                HorizontalAlignment="Right"
-                Header="Search"
-                PlaceholderText="Provider name or GUID"
-                TextChanged="SearchTextBox_TextChanged" />
+                Orientation="Horizontal"
+                Spacing="12">
+                <controls:CheckBox
+                    VerticalAlignment="Bottom"
+                    Content="Show missing providers"
+                    IsChecked="{Binding ShowMissingProviders, Mode=TwoWay}" />
+                <controls:TextBox
+                    Width="360"
+                    Header="Search"
+                    PlaceholderText="Provider name or GUID"
+                    TextChanged="SearchTextBox_TextChanged" />
+            </controls:StackPanel>
         </controls:Grid>
 
         <controls:Grid
@@ -135,6 +142,7 @@
                     RowSpacing="8">
                     <controls:Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </controls:Grid.RowDefinitions>
 
@@ -143,8 +151,40 @@
                         PlaceholderText="Event, task, id, opcode, level, parameter, or type"
                         TextChanged="SchemaSearchTextBox_TextChanged" />
 
-                    <controls:ListView
+                    <controls:Grid
                         Grid.Row="1"
+                        Padding="40,0,12,4"
+                        ColumnSpacing="12">
+                        <controls:Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*" />
+                            <ColumnDefinition Width="80" />
+                            <ColumnDefinition Width="80" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </controls:Grid.ColumnDefinitions>
+                        <controls:TextBlock
+                            FontWeight="SemiBold"
+                            Text="Name" />
+                        <controls:TextBlock
+                            Grid.Column="1"
+                            FontWeight="SemiBold"
+                            Text="ID" />
+                        <controls:TextBlock
+                            Grid.Column="2"
+                            FontWeight="SemiBold"
+                            Text="Version" />
+                        <controls:TextBlock
+                            Grid.Column="3"
+                            FontWeight="SemiBold"
+                            Text="Opcode" />
+                        <controls:TextBlock
+                            Grid.Column="4"
+                            FontWeight="SemiBold"
+                            Text="Level" />
+                    </controls:Grid>
+
+                    <controls:ListView
+                        Grid.Row="2"
                         ItemsSource="{Binding SchemaItems}"
                         SelectionMode="None">
                         <controls:ListView.ItemTemplate>
@@ -154,8 +194,8 @@
                                         <controls:Grid ColumnSpacing="12">
                                             <controls:Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="2*" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="80" />
+                                                <ColumnDefinition Width="80" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="*" />
                                             </controls:Grid.ColumnDefinitions>

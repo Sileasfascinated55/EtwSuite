@@ -7,11 +7,13 @@ public sealed class ProvidersViewModel : ObservableObject
 {
     private readonly IEtwProviderCatalog _providerCatalog;
     private IReadOnlyList<EtwProviderInfo> _allProviders = Array.Empty<EtwProviderInfo>();
+    private readonly HashSet<Guid> _missingProviderIds = new();
     private EtwProviderInfo? _selectedProvider;
     private ProviderDetailsViewModel? _selectedProviderDetails;
     private string _searchText = string.Empty;
     private string? _errorMessage;
     private bool _isLoading;
+    private bool _showMissingProviders;
 
     public ProvidersViewModel(IEtwProviderCatalog providerCatalog)
     {
@@ -54,6 +56,18 @@ public sealed class ProvidersViewModel : ObservableObject
     {
         get => _errorMessage;
         private set => SetProperty(ref _errorMessage, value);
+    }
+
+    public bool ShowMissingProviders
+    {
+        get => _showMissingProviders;
+        set
+        {
+            if (SetProperty(ref _showMissingProviders, value))
+            {
+                ApplyFilter();
+            }
+        }
     }
 
     public bool IsLoading
@@ -112,6 +126,7 @@ public sealed class ProvidersViewModel : ObservableObject
             if (SelectedProvider == provider && SelectedProviderDetails == details)
             {
                 details.SetSchema(schema);
+                SetProviderMissing(provider, schema.Events.Count == 0);
             }
         }
         catch (OperationCanceledException)
@@ -140,6 +155,13 @@ public sealed class ProvidersViewModel : ObservableObject
         string searchText = SearchText.Trim();
 
         IEnumerable<EtwProviderInfo> filteredProviders = _allProviders;
+        if (!ShowMissingProviders)
+        {
+            filteredProviders = filteredProviders.Where(provider =>
+                provider.SchemaSource != EtwProviderSchemaSource.Unknown &&
+                !_missingProviderIds.Contains(provider.Id));
+        }
+
         if (!string.IsNullOrWhiteSpace(searchText))
         {
             filteredProviders = filteredProviders.Where(provider =>
@@ -158,5 +180,17 @@ public sealed class ProvidersViewModel : ObservableObject
             : Providers.FirstOrDefault();
 
         OnPropertyChanged(nameof(ProviderCountText));
+    }
+
+    private void SetProviderMissing(EtwProviderInfo provider, bool isMissing)
+    {
+        bool changed = isMissing
+            ? _missingProviderIds.Add(provider.Id)
+            : _missingProviderIds.Remove(provider.Id);
+
+        if (changed && !ShowMissingProviders)
+        {
+            ApplyFilter();
+        }
     }
 }

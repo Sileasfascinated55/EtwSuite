@@ -1,9 +1,12 @@
 using System.Runtime.InteropServices;
+using System.Management;
+using System.Globalization;
 using System.Xml;
 using System.Xml.Linq;
 using EtwSuite.Core;
 using EtwSuite.Etw.Native;
 using Microsoft.Diagnostics.Tracing.Parsers;
+using Microsoft.Diagnostics.Tracing.Session;
 
 namespace EtwSuite.Etw;
 
@@ -121,6 +124,12 @@ public sealed class EtwProviderCatalog : IEtwProviderCatalog
         if (manifestSchema is not null)
         {
             return manifestSchema;
+        }
+
+        EtwProviderSchema? wmiSchema = TryGetWmiSchema(provider, diagnostics, cancellationToken);
+        if (wmiSchema is not null)
+        {
+            return wmiSchema;
         }
 
         if (provider.SchemaSource is EtwProviderSchemaSource.Wpp or EtwProviderSchemaSource.TraceLogging)
@@ -278,7 +287,7 @@ public sealed class EtwProviderCatalog : IEtwProviderCatalog
                     .Where(element => element.Name.LocalName is "data" or "struct")
                     .Select(element => new EtwSchemaParameter(
                         ReadAttribute(element, "name", "(unnamed parameter)"),
-                        MapManifestInputType(ReadAttribute(element, "inType", string.Empty))))
+                        MapManifestInputType(ReadAttribute(element, "inType", element.Name.LocalName))))
                     .ToArray()
             })
             .Where(template => !string.IsNullOrWhiteSpace(template.Id))
@@ -321,6 +330,186 @@ public sealed class EtwProviderCatalog : IEtwProviderCatalog
     private static string ReadAttribute(XElement element, string name, string fallback)
     {
         return element.Attributes().FirstOrDefault(attribute => attribute.Name.LocalName == name)?.Value ?? fallback;
+    }
+
+    private static EtwProviderSchema? TryGetWmiSchema(
+        EtwProviderInfo provider,
+        List<string> diagnostics,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return GetWmiSchema(provider, cancellationToken);
+        }
+        catch (ManagementException ex)
+        {
+            diagnostics.Add($"WMI/MOF metadata lookup failed: {ex.Message}");
+            return null;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            diagnostics.Add($"WMI/MOF metadata access denied: {ex.Message}");
+            return null;
+        }
+        catch (InvalidOperationException ex)
+        {
+            diagnostics.Add($"WMI/MOF metadata lookup failed: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static EtwProviderSchema? GetWmiSchema(
+        EtwProviderInfo provider,
+        CancellationToken cancellationToken)
+    {
+        ManagementClass? providerClass = FindWmiProviderClass(provider.Id, cancellationToken);
+        if (providerClass is null)
+        {
+            return null;
+        }
+
+        var events = new SortedDictionary<string, EtwSchemaEvent>(StringComparer.Ordinal);
+        string providerClassName = Convert.ToString(providerClass["__CLASS"], CultureInfo.InvariantCulture) ?? string.Empty;
+        using var categorySearcher = new ManagementObjectSearcher(
+            "root\\WMI",
+            $"SELECT * FROM meta_class WHERE __superclass = '{providerClassName}'");
+
+        foreach (ManagementClass categoryClass in categorySearcher.Get().OfType<ManagementClass>())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            int categoryVersion = GetQualifierInt32(categoryClass, "eventversion") ?? 0;
+            string category = GetQualifierString(categoryClass, "guid") ?? Convert.ToString(categoryClass["__CLASS"], CultureInfo.InvariantCulture) ?? string.Empty;
+            string categoryClassName = Convert.ToString(categoryClass["__CLASS"], CultureInfo.InvariantCulture) ?? string.Empty;
+
+            using var templateSearcher = new ManagementObjectSearcher(
+                "root\\WMI",
+                $"SELECT * FROM meta_class WHERE __superclass = '{categoryClassName}'");
+
+            foreach (ManagementClass templateClass in templateSearcher.Get().OfType<ManagementClass>())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                string templateName = Convert.ToString(templateClass["__CLASS"], CultureInfo.InvariantCulture) ?? "(unnamed event)";
+                int version = GetQualifierInt32(templateClass, "eventversion") ?? categoryVersion;
+                string opcode = GetQualifierString(templateClass, "eventtypename") ?? string.Empty;
+                IReadOnlyList<EtwSchemaParameter> parameters = ReadWmiParameters(templateClass);
+
+                foreach (int eventId in GetQualifierInt32Values(templateClass, "eventtype"))
+                {
+                    if (eventId < ushort.MinValue || eventId > ushort.MaxValue)
+                    {
+                        continue;
+                    }
+
+                    byte eventVersion = version is >= byte.MinValue and <= byte.MaxValue ? (byte)version : (byte)0;
+                    events[$"{category}{eventId,6}{eventVersion,6}{templateName}"] = new EtwSchemaEvent(
+                        templateName,
+                        (ushort)eventId,
+                        eventVersion,
+                        string.IsNullOrWhiteSpace(opcode) ? "0" : opcode,
+                        "0",
+                        parameters);
+                }
+            }
+        }
+
+        if (events.Count == 0)
+        {
+            return null;
+        }
+
+        return new EtwProviderSchema(provider, events.Values.ToArray(), Array.Empty<string>());
+    }
+
+    private static ManagementClass? FindWmiProviderClass(Guid providerId, CancellationToken cancellationToken)
+    {
+        using var providerSearcher = new ManagementObjectSearcher(
+            "root\\WMI",
+            "SELECT * FROM meta_class WHERE __superclass = 'EventTrace'");
+
+        foreach (ManagementClass candidateClass in providerSearcher.Get().OfType<ManagementClass>())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            string? guid = GetQualifierString(candidateClass, "guid");
+            if (Guid.TryParse(guid, out Guid candidateProviderId) && candidateProviderId == providerId)
+            {
+                return candidateClass;
+            }
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<EtwSchemaParameter> ReadWmiParameters(ManagementClass templateClass)
+    {
+        var parameters = new SortedDictionary<int, EtwSchemaParameter>();
+        foreach (PropertyData property in templateClass.Properties)
+        {
+            int? wmiDataId = GetQualifierInt32(property, "wmidataid");
+            if (wmiDataId is null)
+            {
+                continue;
+            }
+
+            parameters[wmiDataId.Value] = new EtwSchemaParameter(
+                property.Name,
+                MapWmiType(property.Type));
+        }
+
+        return parameters.Values.ToArray();
+    }
+
+    private static string? GetQualifierString(ManagementClass owner, string qualifierName)
+    {
+        return owner.Qualifiers
+            .OfType<QualifierData>()
+            .FirstOrDefault(qualifier => string.Equals(qualifier.Name, qualifierName, StringComparison.OrdinalIgnoreCase))
+            ?.Value as string;
+    }
+
+    private static int? GetQualifierInt32(ManagementClass owner, string qualifierName)
+    {
+        object? value = owner.Qualifiers
+            .OfType<QualifierData>()
+            .FirstOrDefault(qualifier => string.Equals(qualifier.Name, qualifierName, StringComparison.OrdinalIgnoreCase))
+            ?.Value;
+
+        return value is int intValue ? intValue : null;
+    }
+
+    private static int? GetQualifierInt32(PropertyData owner, string qualifierName)
+    {
+        object? value = owner.Qualifiers
+            .OfType<QualifierData>()
+            .FirstOrDefault(qualifier => string.Equals(qualifier.Name, qualifierName, StringComparison.OrdinalIgnoreCase))
+            ?.Value;
+
+        return value is int intValue ? intValue : null;
+    }
+
+    private static IEnumerable<int> GetQualifierInt32Values(ManagementClass owner, string qualifierName)
+    {
+        object? value = owner.Qualifiers
+            .OfType<QualifierData>()
+            .FirstOrDefault(qualifier => string.Equals(qualifier.Name, qualifierName, StringComparison.OrdinalIgnoreCase))
+            ?.Value;
+
+        if (value is int intValue)
+        {
+            yield return intValue;
+        }
+        else if (value is Array values)
+        {
+            foreach (object item in values)
+            {
+                if (item is int itemValue)
+                {
+                    yield return itemValue;
+                }
+            }
+        }
     }
 
     private static IReadOnlyList<TdhNative.EventDescriptor> EnumerateEventDescriptors(
@@ -594,7 +783,32 @@ public sealed class EtwProviderCatalog : IEtwProviderCatalog
             "UnicodeChar" => "UnicodeChar",
             "AnsiChar" => "AnsiChar",
             "SizeT" => "SizeT",
+            "struct" => "Struct",
             _ => string.IsNullOrWhiteSpace(inputType) ? "Null" : normalizedType
+        };
+    }
+
+    private static string MapWmiType(CimType type)
+    {
+        return type switch
+        {
+            CimType.Boolean => "Boolean",
+            CimType.Char16 => "UnicodeChar",
+            CimType.DateTime => "SystemTime",
+            CimType.Object => "Struct",
+            CimType.Real32 => "Float",
+            CimType.Real64 => "Double",
+            CimType.Reference => "Pointer",
+            CimType.SInt8 => "Int8",
+            CimType.SInt16 => "Short",
+            CimType.SInt32 => "Integer",
+            CimType.SInt64 => "Int64",
+            CimType.String => "WideString",
+            CimType.UInt8 => "UInt8",
+            CimType.UInt16 => "UShort",
+            CimType.UInt32 => "UInteger",
+            CimType.UInt64 => "UInt64",
+            _ => type.ToString()
         };
     }
 }
