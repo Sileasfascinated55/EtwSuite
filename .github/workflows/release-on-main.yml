@@ -37,7 +37,7 @@ jobs:
           prerelease: false
       
       - name: Upload Release Assets
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: nupkg
           path: ./nupkg/*.nupkg
