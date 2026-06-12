@@ -14,12 +14,16 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
     private const int DefaultEventsPerPage = 100;
     private readonly IEtwProviderCatalog _providerCatalog;
     private readonly DispatcherQueue _dispatcherQueue;
-    private readonly List<LiveEventViewModel> _eventBuffer = new();
+    private readonly List<EtwLiveEventRecord> _eventBuffer = new();
+    private readonly List<EtwLiveEventRecord> _filteredEvents = new();
     private IReadOnlyList<EtwProviderInfo> _allProviders = Array.Empty<EtwProviderInfo>();
     private IEtwLiveEventConsumer? _consumer;
     private CancellationTokenSource? _consumeCancellation;
     private EtwProviderInfo? _selectedProvider;
     private string _searchText = string.Empty;
+    private string _eventFilterText = string.Empty;
+    private EtwFilterMode _providerSearchFilterMode = EtwFilterMode.Basic;
+    private EtwFilterMode _selectedEventFilterMode = EtwFilterMode.Basic;
     private string? _statusMessage = "Select a provider to start consuming.";
     private EtwTraceSessionState _state = EtwTraceSessionState.Stopped;
     private long _droppedDisplayEvents;
@@ -36,6 +40,8 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
     public ObservableCollection<EtwProviderInfo> Providers { get; } = new();
 
     public ObservableCollection<LiveEventViewModel> Events { get; } = new();
+
+    public IReadOnlyList<EtwFilterMode> FilterModes { get; } = new[] { EtwFilterMode.Basic, EtwFilterMode.SQL };
 
     public IReadOnlyList<string> ExportFormats { get; } = new[] { "JSON", "CSV" };
 
@@ -69,7 +75,43 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
         {
             if (SetProperty(ref _searchText, value))
             {
-                ApplyFilter();
+                ApplyProviderFilter();
+            }
+        }
+    }
+
+    public EtwFilterMode ProviderSearchFilterMode
+    {
+        get => _providerSearchFilterMode;
+        set
+        {
+            if (SetProperty(ref _providerSearchFilterMode, value))
+            {
+                ApplyProviderFilter();
+            }
+        }
+    }
+
+    public string EventFilterText
+    {
+        get => _eventFilterText;
+        set
+        {
+            if (SetProperty(ref _eventFilterText, value))
+            {
+                ApplyEventFilter(resetPage: true);
+            }
+        }
+    }
+
+    public EtwFilterMode SelectedEventFilterMode
+    {
+        get => _selectedEventFilterMode;
+        set
+        {
+            if (SetProperty(ref _selectedEventFilterMode, value))
+            {
+                ApplyEventFilter(resetPage: true);
             }
         }
     }
@@ -101,7 +143,9 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
     public string StartStopText => CanStop ? "Stop Consuming" : "Start Consuming";
 
     public string EventCountText => $"{Events.Count:N0} events";
-    public string TotalEventCountText => $"{_eventBuffer.Count:N0} total events";
+    public string TotalEventCountText => string.IsNullOrWhiteSpace(EventFilterText)
+        ? $"{_eventBuffer.Count:N0} total events"
+        : $"{_filteredEvents.Count:N0} matching, {_eventBuffer.Count:N0} total events";
 
     public string DroppedEventsText => _droppedDisplayEvents == 0
         ? string.Empty
@@ -136,7 +180,7 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
         }
     }
 
-    public int TotalPages => Math.Max(1, (int)Math.Ceiling(_eventBuffer.Count / (double)EventsPerPage));
+    public int TotalPages => Math.Max(1, (int)Math.Ceiling(_filteredEvents.Count / (double)EventsPerPage));
 
     public bool CanGoToPreviousPage => CurrentPage > 1;
 
@@ -144,12 +188,12 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
 
     public string PageStatusText => $"Page {CurrentPage:N0} of {TotalPages:N0}";
 
-    public bool HasEvents => _eventBuffer.Count > 0;
+    public bool HasEvents => _filteredEvents.Count > 0;
 
     public async Task LoadProvidersAsync(CancellationToken cancellationToken)
     {
         _allProviders = await _providerCatalog.EnumerateProvidersAsync(cancellationToken);
-        ApplyFilter();
+        ApplyProviderFilter();
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -162,6 +206,7 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
         State = EtwTraceSessionState.Starting;
         StatusMessage = "Starting trace session...";
         _eventBuffer.Clear();
+        _filteredEvents.Clear();
         Events.Clear();
         _currentPage = 1;
         _droppedDisplayEvents = 0;
@@ -269,7 +314,7 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
 
             foreach (EtwLiveEventRecord record in records)
             {
-                _eventBuffer.Add(new LiveEventViewModel(record));
+                _eventBuffer.Add(record);
             }
 
             while (_eventBuffer.Count > MaxDisplayedEvents)
@@ -278,13 +323,14 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
                 _droppedDisplayEvents++;
             }
 
+            ApplyEventFilter(resetPage: false);
             if (wasOnLastPage)
             {
                 _currentPage = TotalPages;
                 OnPropertyChanged(nameof(CurrentPage));
+                RefreshCurrentPage();
             }
 
-            RefreshCurrentPage();
             OnPropertyChanged(nameof(EventCountText));
             OnPropertyChanged(nameof(TotalEventCountText));
             OnPropertyChanged(nameof(HasEvents));
@@ -300,7 +346,7 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
 
     public IReadOnlyList<LiveEventViewModel> GetEventSnapshot()
     {
-        return _eventBuffer.ToArray();
+        return _filteredEvents.Select(record => new LiveEventViewModel(record)).ToArray();
     }
 
     public string CreateExportContent()
@@ -393,9 +439,9 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
         Events.Clear();
 
         int skip = (CurrentPage - 1) * EventsPerPage;
-        foreach (LiveEventViewModel liveEvent in _eventBuffer.Skip(skip).Take(EventsPerPage))
+        foreach (EtwLiveEventRecord record in _filteredEvents.Skip(skip).Take(EventsPerPage))
         {
-            Events.Add(liveEvent);
+            Events.Add(new LiveEventViewModel(record));
         }
 
         OnPropertyChanged(nameof(EventCountText));
@@ -489,18 +535,22 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
         return builder.ToString().Trim();
     }
 
-    private void ApplyFilter()
+    private void ApplyProviderFilter()
     {
         EtwProviderInfo? previousSelection = SelectedProvider;
-        string searchText = SearchText.Trim();
+        EtwCompiledFilter<EtwProviderInfo> searchFilter =
+            EtwFilterCompiler.CompileProviderFilter(ProviderSearchFilterMode, SearchText);
+        if (searchFilter.ErrorMessage is not null)
+        {
+            StatusMessage = $"Provider filter: {searchFilter.ErrorMessage}";
+        }
+        else
+        {
+            ClearFilterError("Provider filter:");
+        }
 
         IEnumerable<EtwProviderInfo> filteredProviders = _allProviders;
-        if (!string.IsNullOrWhiteSpace(searchText))
-        {
-            filteredProviders = filteredProviders.Where(provider =>
-                provider.Name.Contains(searchText, StringComparison.CurrentCultureIgnoreCase) ||
-                provider.Id.ToString("D").Contains(searchText, StringComparison.OrdinalIgnoreCase));
-        }
+        filteredProviders = filteredProviders.Where(searchFilter.Matches);
 
         Providers.Clear();
         foreach (EtwProviderInfo provider in filteredProviders.Take(500))
@@ -511,6 +561,51 @@ public sealed class ConsumeProviderViewModel : ObservableObject, IAsyncDisposabl
         SelectedProvider = previousSelection is not null && Providers.Contains(previousSelection)
             ? previousSelection
             : null;
+    }
+
+    private void ApplyEventFilter(bool resetPage)
+    {
+        EtwCompiledFilter<EtwLiveEventRecord> eventFilter =
+            EtwFilterCompiler.CompileEventFilter(SelectedEventFilterMode, EventFilterText);
+
+        _filteredEvents.Clear();
+        if (eventFilter.ErrorMessage is null)
+        {
+            _filteredEvents.AddRange(_eventBuffer.Where(eventFilter.Matches));
+            ClearFilterError("Event filter:");
+        }
+        else
+        {
+            StatusMessage = $"Event filter: {eventFilter.ErrorMessage}";
+        }
+
+        if (resetPage)
+        {
+            _currentPage = 1;
+            OnPropertyChanged(nameof(CurrentPage));
+        }
+        else if (CurrentPage > TotalPages)
+        {
+            _currentPage = TotalPages;
+            OnPropertyChanged(nameof(CurrentPage));
+        }
+
+        RefreshCurrentPage();
+        OnPropertyChanged(nameof(TotalEventCountText));
+        OnPropertyChanged(nameof(HasEvents));
+        OnPagingPropertiesChanged();
+    }
+
+    private void ClearFilterError(string prefix)
+    {
+        if (StatusMessage?.StartsWith(prefix, StringComparison.Ordinal) != true)
+        {
+            return;
+        }
+
+        StatusMessage = State == EtwTraceSessionState.Running && SelectedProvider is not null
+            ? $"Consuming {SelectedProvider.Name}."
+            : "Select a provider to start consuming.";
     }
 }
 

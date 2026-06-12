@@ -146,6 +146,11 @@ namespace EtwSuite
             UpdateConsumeProviderMatchesVisibility();
         }
 
+        private void EventFilterTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            ConsumeProviderViewModel.EventFilterText = ((TextBox)sender).Text;
+        }
+
         private void ConsumeSearchTextBox_KeyDown(object sender, KeyRoutedEventArgs e)
         {
             if (e.Key != VirtualKey.Enter)
