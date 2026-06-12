@@ -5,6 +5,8 @@
 
 # Private dirs
 .*/
+!.github/
+!.github/workflows/
 *.md
 !README.md
 !docs/
