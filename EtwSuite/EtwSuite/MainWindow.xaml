@@ -19,6 +19,18 @@
         IsSettingsVisible="False"
         Loaded="Root_Loaded"
         SelectionChanged="Root_SelectionChanged">
+        <controls:NavigationView.PaneHeader>
+            <controls:Grid Padding="12,12,12,4">
+                <Image
+                    Width="180"
+                    Height="52"
+                    HorizontalAlignment="Left"
+                    AutomationProperties.Name="EtwSuite"
+                    Source="Assets/EtwSuite_Logo.png"
+                    Stretch="Uniform" />
+            </controls:Grid>
+        </controls:NavigationView.PaneHeader>
+
         <controls:NavigationView.MenuItems>
             <controls:NavigationViewItem
                 x:Name="ListProvidersNavigationItem"

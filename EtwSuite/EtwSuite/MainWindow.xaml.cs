@@ -18,6 +18,7 @@ namespace EtwSuite
         public MainWindow()
         {
             InitializeComponent();
+            SetWindowIcon();
 
             var providerCatalog = new EtwProviderCatalog();
             var recordingReader = new TraceEventRecordingReader();
@@ -38,6 +39,15 @@ namespace EtwSuite
         public ConsumeProviderViewModel ConsumeProviderViewModel { get; }
 
         public OpenRecordingViewModel OpenRecordingViewModel { get; }
+
+        private void SetWindowIcon()
+        {
+            string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "EtwSuite_Icon.ico");
+            if (File.Exists(iconPath))
+            {
+                AppWindow.SetIcon(iconPath);
+            }
+        }
 
         private async void Root_Loaded(object sender, RoutedEventArgs e)
         {

@@ -10,12 +10,22 @@
     <UseWinUI>true</UseWinUI>
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <ApplicationIcon>Assets\EtwSuite_Icon.ico</ApplicationIcon>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Assets\EtwSuite_Icon.ico" />
+    <None Remove="Assets\EtwSuite_Icon.png" />
+    <None Remove="Assets\EtwSuite_Logo.png" />
+    <Content Include="Assets\EtwSuite_Icon.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\EtwSuite_Icon.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets\EtwSuite_Logo.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
