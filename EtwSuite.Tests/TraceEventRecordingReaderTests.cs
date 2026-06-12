@@ -20,6 +20,15 @@ public sealed class TraceEventRecordingReaderTests
     }
 
     [TestMethod]
+    public void ShouldIncludeEtlEventProvider_ExcludesSystemTraceProvider()
+    {
+        Assert.IsFalse(TraceEventRecordingReader.ShouldIncludeEtlEventProvider("MSNT_SystemTrace"));
+        Assert.IsFalse(TraceEventRecordingReader.ShouldIncludeEtlEventProvider("msnt_systemtrace"));
+        Assert.IsTrue(TraceEventRecordingReader.ShouldIncludeEtlEventProvider("Microsoft-Windows-Kernel-Process"));
+        Assert.IsTrue(TraceEventRecordingReader.ShouldIncludeEtlEventProvider(null));
+    }
+
+    [TestMethod]
     public async Task ReadEventsAsync_ReadsEtwSuiteJsonExport()
     {
         string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json");
@@ -69,12 +78,8 @@ public sealed class TraceEventRecordingReaderTests
         string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.csv");
         await File.WriteAllTextAsync(
             filePath,
-            """
-            
-            Time,Provider,Event,Id,Version,Opcode,Level,ProcessId,ProcessName,ThreadId,Parameters
-            12:34:56.789,Provider-A,Event One,7,1,2,4,1234,proc,5678,"ImageName=cmd.exe; CommandLine=""cmd.exe /c whoami
-            
-            """);
+            "Time,Provider,Event,Id,Version,Opcode,Level,ProcessId,ProcessName,ThreadId,Parameters" + Environment.NewLine +
+            "12:34:56.789,Provider-A,Event One,7,1,2,4,1234,proc,5678,\"ImageName=cmd.exe; CommandLine=\"\"cmd.exe /c whoami\"\"\"" + Environment.NewLine);
 
         try
         {

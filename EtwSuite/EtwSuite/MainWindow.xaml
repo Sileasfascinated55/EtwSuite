@@ -20,11 +20,15 @@
         Loaded="Root_Loaded"
         SelectionChanged="Root_SelectionChanged">
         <controls:NavigationView.PaneHeader>
-            <controls:Grid Padding="12,12,12,4">
+            <controls:Grid
+                Width="296"
+                Height="64"
+                Padding="12,6">
                 <Image
-                    Width="180"
-                    Height="52"
+                    Width="720"
+                    Height="140"
                     HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
                     AutomationProperties.Name="EtwSuite"
                     Source="Assets/EtwSuite_Logo.png"
                     Stretch="Uniform" />

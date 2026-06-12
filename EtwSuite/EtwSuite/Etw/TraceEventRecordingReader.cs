@@ -91,6 +91,11 @@ public sealed class TraceEventRecordingReader : IEtwRecordingReader
             source.Dynamic.All += traceEvent =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                if (!ShouldIncludeEtlEventProvider(traceEvent.ProviderName))
+                {
+                    return;
+                }
+
                 batch.Add(CreateEvent(traceEvent));
                 if (batch.Count >= batchSize)
                 {
@@ -116,6 +121,11 @@ public sealed class TraceEventRecordingReader : IEtwRecordingReader
         }
 
         return batches;
+    }
+
+    internal static bool ShouldIncludeEtlEventProvider(string? providerName)
+    {
+        return !string.Equals(providerName, "MSNT_SystemTrace", StringComparison.OrdinalIgnoreCase);
     }
 
     private static IReadOnlyList<IReadOnlyList<EtwLiveEventRecord>> ReadJson(
