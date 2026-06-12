@@ -48,8 +48,7 @@ payload.ImageName LIKE '*cmd.exe'
 WHERE provider LIKE 'Microsoft-Windows-*' AND pid = 4242
 ```
 
-See [docs/event-sql-filtering.md](docs/event-sql-filtering.md) for the full
-field list and syntax.
+See [docs/event-sql-filtering.md](docs/event-sql-filtering.md) for the full field list and syntax.
 
 ## Recordings
 
@@ -59,9 +58,7 @@ EtwSuite can currently open:
 - `.json`: JSON files exported by EtwSuite.
 - `.csv`: CSV files exported by EtwSuite.
 
-`.evtx` and other file types are not supported yet. ETL payload decoding is
-best effort because provider metadata may not be present on the machine reading
-the file.
+`.evtx` and other file types are not supported yet. ETL payload decoding is best effort because provider metadata may not be present on the machine reading the file.
 
 See [docs/recordings.md](docs/recordings.md) for the current recording behavior.
 
@@ -93,8 +90,7 @@ See [docs/recordings.md](docs/recordings.md) for the current recording behavior.
 - [Microsoft.Data.Sqlite](https://www.nuget.org/packages/Microsoft.Data.Sqlite)
 - [Microsoft.WindowsAppSDK](https://www.nuget.org/packages/Microsoft.WindowsAppSDK)
 
-Some live ETW providers require administrator privileges or special system
-permissions (e.g. Microsoft-Windows-Threat-Intelligence). Basic provider browsing, saved sessions, and supported offline recording inspection should not require elevation.
+Some live ETW providers require administrator privileges or special system permissions (e.g. Microsoft-Windows-Threat-Intelligence). Basic provider browsing, saved sessions, and supported offline recording inspection should not require elevation.
 
 ### Build
 
