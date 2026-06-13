@@ -4,6 +4,7 @@ using EtwSuite.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using Windows.System;
@@ -18,6 +19,7 @@ namespace EtwSuite
         public MainWindow()
         {
             InitializeComponent();
+            SetSystemBackdrop();
             SetWindowIcon();
 
             var providerCatalog = new EtwProviderCatalog();
@@ -55,6 +57,18 @@ namespace EtwSuite
             if (File.Exists(iconPath))
             {
                 AppWindow.SetIcon(iconPath);
+            }
+        }
+
+        private void SetSystemBackdrop()
+        {
+            try
+            {
+                SystemBackdrop = new MicaBackdrop();
+            }
+            catch (Exception)
+            {
+                SystemBackdrop = null;
             }
         }
 

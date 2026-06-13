@@ -10,6 +10,7 @@
     <RuntimeIdentifier Condition="'$(Platform)' != 'ARM64'">win-x64</RuntimeIdentifier>
     <InstallerPlatform Condition="'$(Platform)' == 'ARM64'">arm64</InstallerPlatform>
     <InstallerPlatform Condition="'$(Platform)' != 'ARM64'">x64</InstallerPlatform>
+    <AppBuildOutputDir>$(MSBuildProjectDirectory)\..\..\EtwSuite\EtwSuite\bin\$(Platform)\$(Configuration)\$(AppTargetFramework)\$(RuntimeIdentifier)\</AppBuildOutputDir>
     <PublishDir>$(MSBuildProjectDirectory)\obj\publish\$(Configuration)\$(RuntimeIdentifier)</PublishDir>
     <LicenseRtf>$(MSBuildProjectDirectory)\obj\$(Platform)\$(Configuration)\LICENSE.rtf</LicenseRtf>
     <DefineConstants>PublishDir=$(PublishDir);ProductVersion=$(ProductVersion)</DefineConstants>
@@ -34,5 +35,17 @@
       Targets="Publish"
       Properties="Configuration=$(Configuration);Platform=$(Platform);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=true;PublishSingleFile=false;PublishTrimmed=false;PublishReadyToRun=true;PublishDir=$(PublishDir)\"
       />
+  </Target>
+
+  <Target Name="CopyWinUIResourcesForMsi" AfterTargets="PublishEtwSuiteForMsi" BeforeTargets="BeforeBuild">
+    <ItemGroup>
+      <AppXamlResources Include="$(AppBuildOutputDir)*.xbf" />
+      <AppXamlResources Include="$(AppBuildOutputDir)EtwSuite.pri" />
+    </ItemGroup>
+    <Error Condition="'@(AppXamlResources)' == ''" Text="No compiled WinUI resources were found in $(AppBuildOutputDir)." />
+    <Copy
+      SourceFiles="@(AppXamlResources)"
+      DestinationFolder="$(PublishDir)"
+      SkipUnchangedFiles="true" />
   </Target>
 </Project>

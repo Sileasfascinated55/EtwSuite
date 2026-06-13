@@ -7,11 +7,8 @@ param(
 )
 
 $licenseText = Get-Content -LiteralPath $InputPath -Raw
-$escapedText = $licenseText `
-    -replace '\\', '\\' `
-    -replace '{', '\{' `
-    -replace '}', '\}' `
-    -replace "`r`n|`n|`r", '\par '
+$escapedText = $licenseText.Replace('\', '\\').Replace('{', '\{').Replace('}', '\}')
+$escapedText = $escapedText -replace "`r`n|`n|`r", '\par '
 
 $rtf = "{\rtf1\ansi\deff0{\fonttbl{\f0 Consolas;}}\f0\fs18 $escapedText}"
 $outputDirectory = Split-Path -Parent $OutputPath
