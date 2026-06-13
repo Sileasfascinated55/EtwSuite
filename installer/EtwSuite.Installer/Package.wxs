@@ -24,11 +24,11 @@
       <Directory Id="ApplicationProgramsFolder" Name="EtwSuite" />
     </StandardDirectory>
 
-    <Feature Id="ApplicationFeature" Title="EtwSuite" Level="1" Absent="disallow">
+    <Feature Id="ApplicationFeature" Title="EtwSuite" Level="1">
       <Files Include="$(var.PublishDir)\**" Directory="INSTALLFOLDER" />
     </Feature>
 
-    <Feature Id="StartMenuShortcutFeature" Title="Start Menu shortcut" Description="Create an EtwSuite shortcut in the Start Menu." Level="1" Absent="allow">
+    <Feature Id="StartMenuShortcutFeature" Title="Start Menu shortcut" Description="Create an EtwSuite shortcut in the Start Menu." Level="1">
       <ComponentRef Id="StartMenuShortcutComponent" />
     </Feature>
 
@@ -46,7 +46,7 @@
       </Component>
     </DirectoryRef>
 
-    <ui:WixUI Id="WixUI_Advanced" InstallDirectory="INSTALLFOLDER" />
+    <ui:WixUI Id="WixUI_Advanced" />
     <UIRef Id="WixUI_ErrorProgressText" />
   </Package>
 </Wix>

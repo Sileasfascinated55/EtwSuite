@@ -114,6 +114,9 @@ dotnet build installer\EtwSuite.Installer\EtwSuite.Installer.wixproj -c Release 
 Only pass `AcceptEula=wix7` after confirming the WiX Toolset OSMF terms apply
 appropriately for your use.
 
+If ICE validation fails because the build environment cannot access the Windows
+Installer service, add `-p:SuppressValidation=true`.
+
 ### Test
 
 ```powershell
