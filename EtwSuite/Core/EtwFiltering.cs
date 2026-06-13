@@ -447,7 +447,7 @@ public static class EtwFilterCompiler
                 {
                     if (!TryReadString(text, position, out string value, out int nextPosition))
                     {
-                        tokens = Array.Empty<SqlToken>();
+                        tokens = [];
                         errorMessage = $"Unterminated string literal. Position {position}.";
                         return false;
                     }
@@ -498,7 +498,7 @@ public static class EtwFilterCompiler
 
                 if (operatorKind is null)
                 {
-                    tokens = Array.Empty<SqlToken>();
+                    tokens = [];
                     errorMessage = $"Unexpected character '{current}'. Position {position}.";
                     return false;
                 }
@@ -571,18 +571,11 @@ public static class EtwFilterCompiler
             public abstract bool Evaluate(T item, Func<T, string, (bool Found, FilterValue Value)> resolveField);
         }
 
-        private sealed class BinaryBooleanExpression : SqlExpression
+        private sealed class BinaryBooleanExpression(SqlFilterParser<T>.SqlExpression left, SqlFilterParser<T>.SqlExpression right, bool isAnd) : SqlExpression
         {
-            private readonly SqlExpression _left;
-            private readonly SqlExpression _right;
-            private readonly bool _isAnd;
-
-            public BinaryBooleanExpression(SqlExpression left, SqlExpression right, bool isAnd)
-            {
-                _left = left;
-                _right = right;
-                _isAnd = isAnd;
-            }
+            private readonly SqlExpression _left = left;
+            private readonly SqlExpression _right = right;
+            private readonly bool _isAnd = isAnd;
 
             public override bool Evaluate(T item, Func<T, string, (bool Found, FilterValue Value)> resolveField)
             {
@@ -592,14 +585,9 @@ public static class EtwFilterCompiler
             }
         }
 
-        private sealed class NotExpression : SqlExpression
+        private sealed class NotExpression(SqlFilterParser<T>.SqlExpression inner) : SqlExpression
         {
-            private readonly SqlExpression _inner;
-
-            public NotExpression(SqlExpression inner)
-            {
-                _inner = inner;
-            }
+            private readonly SqlExpression _inner = inner;
 
             public override bool Evaluate(T item, Func<T, string, (bool Found, FilterValue Value)> resolveField)
             {
@@ -607,20 +595,12 @@ public static class EtwFilterCompiler
             }
         }
 
-        private sealed class ComparisonExpression : SqlExpression
+        private sealed class ComparisonExpression(string fieldName, EtwFilterCompiler.SqlTokenKind operatorKind, string literal, bool literalIsNumber) : SqlExpression
         {
-            private readonly string _fieldName;
-            private readonly SqlTokenKind _operatorKind;
-            private readonly string _literal;
-            private readonly bool _literalIsNumber;
-
-            public ComparisonExpression(string fieldName, SqlTokenKind operatorKind, string literal, bool literalIsNumber)
-            {
-                _fieldName = fieldName;
-                _operatorKind = operatorKind;
-                _literal = literal;
-                _literalIsNumber = literalIsNumber;
-            }
+            private readonly string _fieldName = fieldName;
+            private readonly SqlTokenKind _operatorKind = operatorKind;
+            private readonly string _literal = literal;
+            private readonly bool _literalIsNumber = literalIsNumber;
 
             public override bool Evaluate(T item, Func<T, string, (bool Found, FilterValue Value)> resolveField)
             {
@@ -677,12 +657,8 @@ public static class EtwFilterCompiler
         }
     }
 
-    private sealed class SqlParseException : Exception
+    private sealed class SqlParseException(string message) : Exception(message)
     {
-        public SqlParseException(string message)
-            : base(message)
-        {
-        }
     }
 
     private static class WildcardMatcher
