@@ -65,11 +65,22 @@ namespace EtwSuite
             try
             {
                 await ProvidersViewModel.LoadProvidersAsync(_loadCancellation.Token);
-                await ConsumeProviderViewModel.LoadProvidersAsync(_loadCancellation.Token);
                 await SavedSessionsViewModel.InitializeAsync(_loadCancellation.Token);
             }
             catch (OperationCanceledException)
             {
+            }
+
+            try
+            {
+                await ConsumeProviderViewModel.LoadProvidersAsync(_loadCancellation.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                ConsumeProviderViewModel.ReportError(ex.Message);
             }
         }
 
