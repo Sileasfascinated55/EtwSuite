@@ -11,6 +11,7 @@
     <InstallerPlatform Condition="'$(Platform)' == 'ARM64'">arm64</InstallerPlatform>
     <InstallerPlatform Condition="'$(Platform)' != 'ARM64'">x64</InstallerPlatform>
     <PublishDir>$(MSBuildProjectDirectory)\obj\publish\$(Configuration)\$(RuntimeIdentifier)</PublishDir>
+    <LicenseRtf>$(MSBuildProjectDirectory)\obj\$(Platform)\$(Configuration)\LICENSE.rtf</LicenseRtf>
     <DefineConstants>PublishDir=$(PublishDir);ProductVersion=$(ProductVersion)</DefineConstants>
   </PropertyGroup>
 
@@ -20,7 +21,12 @@
 
   <ItemGroup>
     <PackageReference Include="WixToolset.UI.wixext" Version="7.0.0" />
+    <BindVariable Include="WixUILicenseRtf=$(LicenseRtf)" />
   </ItemGroup>
+
+  <Target Name="GenerateLicenseRtf" BeforeTargets="BeforeBuild">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\ConvertLicenseToRtf.ps1&quot; -InputPath &quot;$(MSBuildProjectDirectory)\..\..\LICENSE&quot; -OutputPath &quot;$(LicenseRtf)&quot;" />
+  </Target>
 
   <Target Name="PublishEtwSuiteForMsi" BeforeTargets="BeforeBuild">
     <MSBuild
