@@ -22,13 +22,13 @@ EtwSuite is an ETW inspection suite inspired by [EtwExplorer](https://github.com
 - View live events with provider, event name, ID, version, opcode, level,
   process, thread, and payload fields.
 - Filter live and recorded events with basic text/wildcard search.
-- Filter events with a SQL-style in-process expression parser.
+- Filter events with either basic wildcard or a SQL style expression parser.
 - Record consumed sessions to native `.etl` files.
 - Export captured event rows to JSON and CSV.
 - Open supported recordings: Any `.etl`, exported `.json` and `.csv`.
 - Save, load, and delete session templates in a local SQLite database.
 - Open a provider directly from the provider list in the consuming window.
-- Run focused tests for filtering, recording reads, and saved session storage.
+- Intel x64 and ARM64 compatibility.
 
 ## Filtering
 
@@ -48,7 +48,7 @@ payload.ImageName LIKE '*cmd.exe'
 WHERE provider LIKE 'Microsoft-Windows-*' AND pid = 4242
 ```
 
-See [docs/event-sql-filtering.md](docs/event-sql-filtering.md) for the full field list and syntax.
+See the help page on the application for the full field list and syntax.
 
 ## Recordings
 
@@ -60,7 +60,7 @@ EtwSuite can currently open:
 
 `.evtx` and other file types are not supported yet. ETL payload decoding is best effort because provider metadata may not be present on the machine reading the file.
 
-See [docs/recordings.md](docs/recordings.md) for the current recording behavior.
+See the help page on the application for the current recording behavior.
 
 ## Basic Usage
 
