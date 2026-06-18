@@ -14,6 +14,12 @@
     <PublishDir>$(MSBuildProjectDirectory)\obj\publish\$(Configuration)\$(RuntimeIdentifier)</PublishDir>
     <LicenseRtf>$(MSBuildProjectDirectory)\obj\$(Platform)\$(Configuration)\LICENSE.rtf</LicenseRtf>
     <DefineConstants>PublishDir=$(PublishDir);ProductVersion=$(ProductVersion)</DefineConstants>
+    <!--
+      ICE03 reports an invalid/overflowing File.Language id for the harvested third-party native
+      binaries (e.g. Microsoft.O365.Security.Native.ETW.dll, Ijwhost.dll). The language column is
+      informational and these files install correctly, so suppress this benign validation noise.
+    -->
+    <SuppressIces>ICE03</SuppressIces>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Platform)' == 'AnyCPU'">
